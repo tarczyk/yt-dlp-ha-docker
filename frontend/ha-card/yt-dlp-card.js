@@ -192,6 +192,7 @@ class YtDlpCard extends HTMLElement {
     this._busy = false;
     this._message = null;
     this._pollHandle = null;
+    this._mediaSubdir = "youtube_downloads";
   }
 
   static getConfigElement() {
@@ -212,6 +213,7 @@ class YtDlpCard extends HTMLElement {
       title: config.title !== undefined ? config.title : DEFAULT_TITLE,
       max_tasks: config.max_tasks !== undefined ? Number(config.max_tasks) : DEFAULT_MAX_TASKS,
     };
+    this._fetchApiConfig();
     this._render();
     this._startPolling();
   }
@@ -226,6 +228,18 @@ class YtDlpCard extends HTMLElement {
 
   _apiUrl(path) {
     return `${this._config.api_url}${path}`;
+  }
+
+  async _fetchApiConfig() {
+    try {
+      const resp = await fetch(this._apiUrl("/config"));
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.media_subdir) this._mediaSubdir = data.media_subdir;
+      }
+    } catch (_e) {
+      // Keep default media_subdir
+    }
   }
 
   _startPolling() {
@@ -415,12 +429,13 @@ class YtDlpCard extends HTMLElement {
   }
 
   _openMediaBrowser(_title) {
+    const subdir = this._mediaSubdir || "youtube_downloads";
     const event = new CustomEvent("hass-action", {
       bubbles: true,
       composed: true,
       detail: {
         action: "navigate",
-        navigation_path: `/media-browser/app,media-source://media_source/local/youtube_downloads`,
+        navigation_path: `/media-browser/app,media-source://media_source/local/${subdir}`,
       },
     });
     this.dispatchEvent(event);

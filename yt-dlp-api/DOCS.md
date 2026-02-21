@@ -16,16 +16,20 @@ This add-on runs the **yt-dlp REST API** inside Home Assistant OS, enabling you 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `port` | `5000` | TCP port the Flask API listens on inside the container |
+| `media_subdir` | `youtube_downloads` | Subfolder under HA `/media` where downloads are saved (e.g. `youtube_downloads`, `videos`, `downloads`) |
 
 Example:
 
 ```yaml
 port: 5000
+media_subdir: youtube_downloads
 ```
+
+To save videos to a different folder in **Media Browser** (e.g. **My media → videos**), set `media_subdir: videos`. Only letters, numbers, underscores, hyphens and dots are allowed.
 
 ## Media storage
 
-Downloaded files are written to `/media/youtube_downloads` inside the container, which is mapped to the HA `/media` share. They will appear in **Media Browser → My media → youtube_downloads**.
+Downloaded files are written to `/media/<media_subdir>` inside the container, which is mapped to the HA `/media` share. They appear in **Media Browser → My media → &lt;media_subdir&gt;**.
 
 ## Using with the Lovelace card
 
