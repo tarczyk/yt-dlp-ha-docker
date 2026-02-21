@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Dark rounded background -->
+  <rect width="128" height="128" rx="28" fill="#2d2d2d"/>
+  <!-- Red play triangle (video) -->
+  <path d="M48 40 L48 88 L88 64 Z" fill="#e53935"/>
+  <!-- White download arrow -->
+  <g stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M64 70 v18 M64 88 l-6-6 M64 88 l6-6"/>
+    <path d="M54 98 h20"/>
+  </g>
+</svg>

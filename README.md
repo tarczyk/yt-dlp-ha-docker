@@ -126,7 +126,7 @@ A HACS-ready Lovelace card that connects directly to the ha-yt-dlp API.
 ### Install via HACS
 
 1. **HACS → Frontend → ⋮ → Custom repositories**
-2. Add: `https://github.com/tarczyk/ha-yt-dlp` → Category: **Lovelace**
+2. Add: `https://github.com/tarczyk/ha-yt-dlp` → Type: **Dashboard** (karty Lovelace w HACS są w tej kategorii)
 3. Search for **yt-dlp Downloader Card** and install it.
 
 ### Add to your dashboard
