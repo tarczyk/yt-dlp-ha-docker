@@ -3,7 +3,6 @@
 🐳 Docker Compose yt-dlp API for Home Assistant with EJS (Node.js) support.  
 Downloads to `/media/youtube_downloads` • Compatible with the `youtube_downloader` integration.
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/tarczyk/yt-dlp-ha-docker?logo=docker&label=Docker%20Pulls)](https://hub.docker.com/r/tarczyk/yt-dlp-ha-docker)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1%2B-41BDF5?logo=home-assistant)](https://www.home-assistant.io/)
 [![Multi-Arch](https://img.shields.io/badge/arch-amd64%20%7C%20arm64-blue?logo=linux)](https://hub.docker.com/r/tarczyk/yt-dlp-ha-docker/tags)
 [![CI](https://img.shields.io/github/actions/workflow/status/tarczyk/yt-dlp-ha-docker/tests.yml?label=Tests&logo=github)](https://github.com/tarczyk/yt-dlp-ha-docker/actions)
