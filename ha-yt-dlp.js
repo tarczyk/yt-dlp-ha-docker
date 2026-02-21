@@ -190,6 +190,7 @@ class YtDlpCard extends HTMLElement {
     this._busy = false;
     this._message = null;
     this._pollHandle = null;
+    this._mediaSubdir = "youtube_downloads";
   }
 
   static getConfigElement() {
@@ -210,6 +211,7 @@ class YtDlpCard extends HTMLElement {
       title: config.title !== undefined ? config.title : DEFAULT_TITLE,
       max_tasks: config.max_tasks !== undefined ? Number(config.max_tasks) : DEFAULT_MAX_TASKS,
     };
+    this._fetchApiConfig();
     this._render();
     this._startPolling();
   }
@@ -224,6 +226,18 @@ class YtDlpCard extends HTMLElement {
 
   _apiUrl(path) {
     return `${this._config.api_url}${path}`;
+  }
+
+  async _fetchApiConfig() {
+    try {
+      const resp = await fetch(this._apiUrl("/config"));
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.media_subdir) this._mediaSubdir = data.media_subdir;
+      }
+    } catch (_e) {
+      // Keep default media_subdir
+    }
   }
 
   _startPolling() {
@@ -413,12 +427,13 @@ class YtDlpCard extends HTMLElement {
   }
 
   _openMediaBrowser(_title) {
+    const subdir = this._mediaSubdir || "youtube_downloads";
     const event = new CustomEvent("hass-action", {
       bubbles: true,
       composed: true,
       detail: {
         action: "navigate",
-        navigation_path: `/media-browser/app,media-source://media_source/local/youtube_downloads`,
+        navigation_path: `/media-browser/app,media-source://media_source/local/${subdir}`,
       },
     });
     this.dispatchEvent(event);
@@ -437,12 +452,69 @@ class YtDlpCard extends HTMLElement {
       .replace(/'/g, "&#39;");
   }
 
+  // HA Lovelace size hint
   getCardSize() {
     return 4;
   }
 }
 
 customElements.define("yt-dlp-card", YtDlpCard);
+
+// Visual config editor (so "Show visual editor" shows fields instead of blank)
+class YtDlpCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = config || {};
+    this._render();
+  }
+
+  _render() {
+    const apiUrl = this._config.api_url || DEFAULT_API_URL;
+    const title = this._config.title !== undefined ? this._config.title : DEFAULT_TITLE;
+    const maxTasks = this._config.max_tasks !== undefined ? String(this._config.max_tasks) : String(DEFAULT_MAX_TASKS);
+
+    this.innerHTML = `
+      <style>
+        .yt-dlp-editor label { display: block; margin-top: 8px; font-weight: 500; color: var(--primary-text-color); }
+        .yt-dlp-editor input { display: block; width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+        .yt-dlp-editor .hint { font-size: 0.85rem; color: var(--secondary-text-color); margin-top: 4px; }
+      </style>
+      <div class="yt-dlp-editor">
+        <label>API URL</label>
+        <input type="text" id="api_url" value="${this._esc(apiUrl)}" placeholder="http://192.168.x.x:5000" />
+        <div class="hint">Adres addona yt-dlp API (ten sam host co HA, port 5000). Np. http://192.168.100.5:5000</div>
+        <label>Tytuł karty</label>
+        <input type="text" id="title" value="${this._esc(title)}" />
+        <label>Max zadań na liście</label>
+        <input type="number" id="max_tasks" min="1" max="20" value="${this._esc(maxTasks)}" />
+      </div>
+    `;
+
+    this.querySelector("#api_url").addEventListener("input", (e) => this._fire(e));
+    this.querySelector("#title").addEventListener("input", (e) => this._fire(e));
+    this.querySelector("#max_tasks").addEventListener("input", (e) => this._fire(e));
+  }
+
+  _esc(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  _fire() {
+    const config = {
+      type: "custom:yt-dlp-card",
+      api_url: this.querySelector("#api_url").value.trim() || DEFAULT_API_URL,
+      title: this.querySelector("#title").value.trim() || DEFAULT_TITLE,
+      max_tasks: parseInt(this.querySelector("#max_tasks").value, 10) || DEFAULT_MAX_TASKS,
+    };
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true }));
+  }
+}
+
+customElements.define("yt-dlp-card-editor", YtDlpCardEditor);
 
 window.customCards = window.customCards || [];
 window.customCards.push({

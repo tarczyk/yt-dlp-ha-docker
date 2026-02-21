@@ -1,6 +1,6 @@
 name: "yt-dlp API"
 description: "yt-dlp download API for Home Assistant. Provides REST endpoints used by the ha-yt-dlp Lovelace card."
-version: "1.0.0"
+version: "1.0.7"
 slug: "yt_dlp_api"
 url: "https://github.com/tarczyk/ha-yt-dlp"
 arch:
@@ -15,8 +15,10 @@ ports_description:
   5000/tcp: "yt-dlp Flask API"
 options:
   port: 5000
+  media_subdir: youtube_downloads
 schema:
   port: int
+  media_subdir: str
 startup: application
 init: false
 map:

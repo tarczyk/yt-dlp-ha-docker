@@ -29,13 +29,14 @@ Install directly from the HA add-on store • Also deployable as a standalone Do
 2. Add: `https://github.com/tarczyk/ha-yt-dlp`
 3. Find **yt-dlp API** in the store and click **Install → Start**.
 
-The add-on runs the Flask API on port `5000` and writes downloads to `/media/youtube_downloads`, which is immediately visible in **Media Browser → My media → youtube_downloads**.
+The add-on runs the Flask API on port `5000` and writes downloads to a folder under HA’s `/media` share (default: **My media → youtube_downloads**). You can change the folder in add-on options.
 
 Add-on configuration (`Options` tab):
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `port` | `5000` | TCP port the Flask API listens on |
+| `media_subdir` | `youtube_downloads` | Subfolder under `/media` where videos are saved (e.g. `videos`, `downloads`); only letters, numbers, `_`, `-`, `.` allowed |
 
 > See [`yt-dlp-api/DOCS.md`](yt-dlp-api/DOCS.md) for full add-on documentation.
 
@@ -118,6 +119,21 @@ curl -X POST http://localhost:5000/download_video \
 | `202` | `{"status": "processing", "task_id": "..."}` | Download queued successfully |
 | `400` | `{"error": "..."}` | Missing or invalid request body |
 
+
+## 🔌 Chrome Extension
+
+A Manifest V3 Chrome extension lives in [`chrome-ext/`](chrome-ext/).
+
+**Quick start:**
+
+1. Open `chrome://extensions/` and enable **Developer mode**
+2. Click **Load unpacked** → select the `chrome-ext/` folder
+3. Enter your HA API URL in **⚙ Settings** (e.g. `http://192.168.1.100:5000`)
+4. Go to any YouTube video page, click the extension icon, hit **Download to HA** → live status → ✅ Done!
+
+See [`chrome-ext/README-chrome.md`](chrome-ext/README-chrome.md) for full documentation.
+
+---
 
 ## 🎨 HA Lovelace Card
 

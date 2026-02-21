@@ -13,6 +13,7 @@ _tasks: dict[str, dict] = {}
 _tasks_lock = threading.Lock()
 
 DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "/config/media")
+MEDIA_SUBDIR = os.environ.get("MEDIA_SUBDIR", "youtube_downloads")
 
 
 def _run_download(task_id: str, url: str) -> None:
@@ -40,6 +41,12 @@ def _is_valid_url(url: str) -> bool:
 @api.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "healthy"}), 200
+
+
+@api.route("/config", methods=["GET"])
+def config():
+    """Return public config (e.g. media path for Lovelace card)."""
+    return jsonify({"media_subdir": MEDIA_SUBDIR}), 200
 
 
 @api.route("/download_video", methods=["POST"])

@@ -1,0 +1,80 @@
+# HA yt-dlp – Chrome Extension
+
+A Manifest V3 Chrome extension that lets you download YouTube videos to your Home Assistant media library with a single click.
+
+## Features
+
+- **Auto-detect YouTube URL** – opens on any `youtube.com/watch` tab and pre-fills the video URL automatically
+- **1-click download** – sends a `POST /download_video` request to your HA yt-dlp API
+- **Live status polling** – polls `GET /tasks/<id>` every 2 s and shows `Loading → Processing → ✅ Completed / ❌ Failed`
+- **Persistent settings** – your HA API URL is stored via `chrome.storage.sync`
+- **Material Design 3 UI** – 350×300 px popup with dark/light theme support
+- **Error handling + retry** – surfaces API errors and transient network failures
+
+## Permissions
+
+| Permission | Reason |
+|---|---|
+| `tabs` | Read the URL of the active tab to auto-fill the YouTube URL |
+| `activeTab` | Inspect the current tab without requesting all-tabs access |
+| `storage` | Persist the HA API URL via `chrome.storage.sync` |
+| `host_permissions` (`http://*/*`, `https://*/*`) | The HA API URL is user-configured at runtime and can be any private IP/hostname. Because the target URL is unknown at install time, a broad pattern is required. No requests are ever sent to third-party servers. |
+
+## Install (Developer Mode)
+
+1. Open Chrome and navigate to `chrome://extensions/`
+2. Enable **Developer mode** (toggle in the top-right corner)
+3. Click **Load unpacked**
+4. Select the `chrome-ext/` folder from your `ha-yt-dlp` checkout
+
+The extension icon will appear in the Chrome toolbar.
+
+## Configuration
+
+1. Click the extension icon on any page
+2. Click **⚙ Settings** to expand the settings panel
+3. Enter your HA yt-dlp API URL (e.g. `http://192.168.1.100:5000`)
+4. The URL is saved automatically when you leave the field
+
+## Usage
+
+1. Go to any YouTube video page (`youtube.com/watch?v=…`)
+2. Click the extension icon – the video URL is filled automatically
+3. Click **Download to HA**
+4. Watch the live status: `Processing… → ✅ Saved to HA Media Browser!`
+
+## Chrome Web Store
+
+> **Privacy:** The extension stores only the HA API URL in `chrome.storage.sync`. No data is sent to third parties. All network requests go directly to the user-configured local API.
+
+Planned listing category: **Productivity**
+
+Required assets for submission:
+- 3 screenshots (1280×800 or 640×400 px) – see `screenshots/`
+- Promotional tile 440×280 px
+- Privacy policy URL
+
+## Folder Structure
+
+```
+chrome-ext/
+├── manifest.json       # Manifest V3 extension descriptor
+├── popup.html          # Extension popup UI (350×300 px, Material Design 3)
+├── popup.js            # Popup logic (storage, tabs, fetch, polling)
+├── background.js       # Service worker (fallback tab opener)
+├── icons/
+│   ├── icon-16.png
+│   ├── icon-48.png
+│   └── icon-128.png
+├── screenshots/        # Chrome Web Store screenshots (add before publishing)
+└── README-chrome.md    # This file
+```
+
+## API Endpoints Used
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `POST` | `/download_video` | Start download; returns `{"task_id": "..."}` |
+| `GET`  | `/tasks/<task_id>` | Poll task status (`processing` / `completed` / `failed`) |
+
+See the root [`README.md`](../README.md) for full API documentation.
