@@ -1,6 +1,6 @@
 /**
  * yt-dlp-card – Home Assistant Lovelace custom card
- * Connects to the yt-dlp-ha-docker Flask API.
+ * Connects to the ha-yt-dlp Flask API.
  *
  * Config options:
  *   api_url   – base URL of the Flask API  (default: http://localhost:5000)
@@ -451,7 +451,7 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "yt-dlp-card",
   name: "yt-dlp Downloader Card",
-  description: "Download YouTube videos via yt-dlp-ha-docker API",
+  description: "Download YouTube videos via ha-yt-dlp API",
   preview: false,
-  documentationURL: "https://github.com/tarczyk/yt-dlp-ha-docker/tree/main/frontend/ha-card",
+  documentationURL: "https://github.com/tarczyk/ha-yt-dlp/tree/main/frontend/ha-card",
 });

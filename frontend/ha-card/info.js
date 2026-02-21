@@ -2,9 +2,9 @@
 const info = {
   name: "yt-dlp Downloader Card",
   version: "1.0.0",
-  repository: "https://github.com/tarczyk/yt-dlp-ha-docker",
-  documentation: "https://github.com/tarczyk/yt-dlp-ha-docker/tree/main/frontend/ha-card",
-  issues: "https://github.com/tarczyk/yt-dlp-ha-docker/issues",
+  repository: "https://github.com/tarczyk/ha-yt-dlp",
+  documentation: "https://github.com/tarczyk/ha-yt-dlp/tree/main/frontend/ha-card",
+  issues: "https://github.com/tarczyk/ha-yt-dlp/issues",
 };
 
 // Expose info for HACS and other tooling

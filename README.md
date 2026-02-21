@@ -1,13 +1,13 @@
-# yt-dlp-ha-docker
+# ha-yt-dlp
 
 🐳 Docker Compose yt-dlp API for Home Assistant with EJS (Node.js) support.  
 Downloads to `/media/youtube_downloads` • Compatible with the `youtube_downloader` integration.
 
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1%2B-41BDF5?logo=home-assistant)](https://www.home-assistant.io/)
-[![Multi-Arch](https://img.shields.io/badge/arch-amd64%20%7C%20arm64-blue?logo=linux)](https://hub.docker.com/r/tarczyk/yt-dlp-ha-docker/tags)
-[![CI](https://img.shields.io/github/actions/workflow/status/tarczyk/yt-dlp-ha-docker/tests.yml?label=Tests&logo=github)](https://github.com/tarczyk/yt-dlp-ha-docker/actions)
-[![Security Scan](https://img.shields.io/github/actions/workflow/status/tarczyk/yt-dlp-ha-docker/security-scan.yml?label=Security%20Scan&logo=shield)](https://github.com/tarczyk/yt-dlp-ha-docker/actions)
-[![License](https://img.shields.io/github/license/tarczyk/yt-dlp-ha-docker)](LICENSE)
+[![Multi-Arch](https://img.shields.io/badge/arch-amd64%20%7C%20arm64-blue?logo=linux)](https://hub.docker.com/r/tarczyk/ha-yt-dlp/tags)
+[![CI](https://img.shields.io/github/actions/workflow/status/tarczyk/ha-yt-dlp/tests.yml?label=Tests&logo=github)](https://github.com/tarczyk/ha-yt-dlp/actions)
+[![Security Scan](https://img.shields.io/github/actions/workflow/status/tarczyk/ha-yt-dlp/security-scan.yml?label=Security%20Scan&logo=shield)](https://github.com/tarczyk/ha-yt-dlp/actions)
+[![License](https://img.shields.io/github/license/tarczyk/ha-yt-dlp)](LICENSE)
 
 ## Features
 
@@ -23,8 +23,8 @@ Downloads to `/media/youtube_downloads` • Compatible with the `youtube_downloa
 One command to get up and running:
 
 ```bash
-git clone https://github.com/tarczyk/yt-dlp-ha-docker.git
-cd yt-dlp-ha-docker
+git clone https://github.com/tarczyk/ha-yt-dlp.git
+cd ha-yt-dlp
 docker compose up -d --build
 ```
 
@@ -98,12 +98,12 @@ curl -X POST http://localhost:5000/download_video \
 
 ## 🎨 HA Lovelace Card (NEW!)
 
-A HACS-ready Lovelace card that connects directly to the yt-dlp-ha-docker API.
+A HACS-ready Lovelace card that connects directly to the ha-yt-dlp API.
 
 ### Install via HACS
 
 1. **HACS → Frontend → ⋮ → Custom repositories**
-2. Add: `https://github.com/tarczyk/yt-dlp-ha-docker` → Category: **Lovelace**
+2. Add: `https://github.com/tarczyk/ha-yt-dlp` → Category: **Lovelace**
 3. Search for **yt-dlp Downloader Card** and install it.
 
 ### Add to your dashboard
@@ -154,8 +154,8 @@ Follow these numbered steps to set up a fully working yt-dlp integration with Ho
 ### Step 1 – Clone and configure the project
 
 ```bash
-git clone https://github.com/tarczyk/yt-dlp-ha-docker.git
-cd yt-dlp-ha-docker
+git clone https://github.com/tarczyk/ha-yt-dlp.git
+cd ha-yt-dlp
 ```
 
 Open `.env` and confirm (or adjust) the settings:
@@ -391,8 +391,24 @@ services:
 The image is scanned for known CVEs on every build using [Trivy](https://github.com/aquasecurity/trivy). Scan results are published as GitHub Actions artifacts. To run a scan locally:
 
 ```bash
-trivy image tarczyk/yt-dlp-ha-docker:latest
+trivy image tarczyk/ha-yt-dlp:latest
 ```
+
+## 🏠 Home Assistant Add-on
+
+This repository also works as an **HA Add-on repository** (the same repo provides both the API add-on and the Lovelace card).
+
+### Install the add-on
+
+1. In Home Assistant, go to **Settings → Add-ons → Add-on store → ⋮ → Repositories**.
+2. Add: `https://github.com/tarczyk/ha-yt-dlp`
+3. Find **yt-dlp API** in the store and click **Install**.
+
+The add-on runs the Flask API on port `5000` and writes downloads to the HA `/media` share (visible in Media Browser).
+
+> See [`yt-dlp-api/DOCS.md`](yt-dlp-api/DOCS.md) for full add-on documentation.
+
+---
 
 ## License
 

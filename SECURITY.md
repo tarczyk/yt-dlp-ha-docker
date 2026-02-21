@@ -17,7 +17,7 @@ The following branch protection rules are configured for the `main` branch:
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please open a [GitHub Security Advisory](https://github.com/tarczyk/yt-dlp-ha-docker/security/advisories/new) rather than a public issue.
+If you discover a security vulnerability, please open a [GitHub Security Advisory](https://github.com/tarczyk/ha-yt-dlp/security/advisories/new) rather than a public issue.
 
 Please include:
 - A description of the vulnerability

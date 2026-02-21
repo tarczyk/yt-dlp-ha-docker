@@ -17,7 +17,7 @@ import time
 import pytest
 import requests
 
-_IMAGE_TAG = "yt-dlp-ha-docker-integ"
+_IMAGE_TAG = "ha-yt-dlp-integ"
 _CONTAINER_NAME = "yt-dlp-ha-integ"
 _HOST_PORT = 15000
 _BASE_URL = f"http://127.0.0.1:{_HOST_PORT}"

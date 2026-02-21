@@ -34,5 +34,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            tarczyk/yt-dlp-ha-docker:latest
-            tarczyk/yt-dlp-ha-docker:${{ github.sha }}
+            tarczyk/ha-yt-dlp:latest
+            tarczyk/ha-yt-dlp:${{ github.sha }}
