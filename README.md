@@ -1,7 +1,7 @@
 # ha-yt-dlp
 
-🐳 Docker Compose yt-dlp API for Home Assistant with EJS (Node.js) support.  
-Downloads to `/media/youtube_downloads` • Compatible with the `youtube_downloader` integration.
+🏠 Home Assistant add-on + Lovelace card that downloads YouTube videos via **yt-dlp**.  
+Install directly from the HA add-on store • Also deployable as a standalone Docker Compose service.
 
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1%2B-41BDF5?logo=home-assistant)](https://www.home-assistant.io/)
 [![Multi-Arch](https://img.shields.io/badge/arch-amd64%20%7C%20arm64-blue?logo=linux)](https://hub.docker.com/r/tarczyk/ha-yt-dlp/tags)
@@ -11,14 +11,37 @@ Downloads to `/media/youtube_downloads` • Compatible with the `youtube_downloa
 
 ## Features
 
+- **HA Add-on** – install straight from the Home Assistant add-on store, no Docker knowledge required
 - **Flask REST API** – `POST /download_video` and `GET /health`
 - **yt-dlp** with Node.js as the JavaScript runtime (EJS) for YouTube 2025+ compatibility
 - **ffmpeg** for post-processing (merging video/audio streams)
-- **Volume** mounted at `/config/media` – visible in HA Media Browser
+- **Downloads to `/media/youtube_downloads`** (add-on) or `/config/media` (Docker Compose) – both visible in HA Media Browser
 - **Multi-arch** image: `linux/amd64` and `linux/arm64` (aarch64 / Raspberry Pi)
 - **Healthcheck** + `restart: unless-stopped` for reliable operation
 
-## Quick Start
+## Installation
+
+### Option A – Home Assistant Add-on (recommended)
+
+> **Requires:** Home Assistant OS or Supervised.
+
+1. In Home Assistant, go to **Settings → Add-ons → Add-on store → ⋮ → Repositories**.
+2. Add: `https://github.com/tarczyk/ha-yt-dlp`
+3. Find **yt-dlp API** in the store and click **Install → Start**.
+
+The add-on runs the Flask API on port `5000` and writes downloads to `/media/youtube_downloads`, which is immediately visible in **Media Browser → My media → youtube_downloads**.
+
+Add-on configuration (`Options` tab):
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `port` | `5000` | TCP port the Flask API listens on |
+
+> See [`yt-dlp-api/DOCS.md`](yt-dlp-api/DOCS.md) for full add-on documentation.
+
+---
+
+### Option B – Docker Compose (standalone / non-HAOS)
 
 One command to get up and running:
 
@@ -96,7 +119,7 @@ curl -X POST http://localhost:5000/download_video \
 | `400` | `{"error": "..."}` | Missing or invalid request body |
 
 
-## 🎨 HA Lovelace Card (NEW!)
+## 🎨 HA Lovelace Card
 
 A HACS-ready Lovelace card that connects directly to the ha-yt-dlp API.
 
@@ -139,9 +162,9 @@ max_tasks: 10
 
 ---
 
-## Home Assistant Integration
+## Home Assistant Integration (Docker Compose)
 
-Follow these numbered steps to set up a fully working yt-dlp integration with Home Assistant.
+Follow these numbered steps to integrate the Docker Compose deployment with Home Assistant.
 
 ### Prerequisites
 
@@ -393,22 +416,6 @@ The image is scanned for known CVEs on every build using [Trivy](https://github.
 ```bash
 trivy image tarczyk/ha-yt-dlp:latest
 ```
-
-## 🏠 Home Assistant Add-on
-
-This repository also works as an **HA Add-on repository** (the same repo provides both the API add-on and the Lovelace card).
-
-### Install the add-on
-
-1. In Home Assistant, go to **Settings → Add-ons → Add-on store → ⋮ → Repositories**.
-2. Add: `https://github.com/tarczyk/ha-yt-dlp`
-3. Find **yt-dlp API** in the store and click **Install**.
-
-The add-on runs the Flask API on port `5000` and writes downloads to the HA `/media` share (visible in Media Browser).
-
-> See [`yt-dlp-api/DOCS.md`](yt-dlp-api/DOCS.md) for full add-on documentation.
-
----
 
 ## License
 
