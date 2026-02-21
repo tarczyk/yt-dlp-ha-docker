@@ -1,0 +1,32 @@
+# On tag push v*, build chrome-ext zip and attach to GitHub Release.
+name: Release Chrome extension zip
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release-ext:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build extension zip
+        id: build
+        run: |
+          cd chrome-ext
+          VERSION=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' manifest.json | head -1)
+          zip -r "ha-yt-dlp-chrome-ext-${VERSION}.zip" . -x "*.zip" -x ".git*" -x "*.gitkeep" -x "build-zip.sh"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "zip_path=chrome-ext/ha-yt-dlp-chrome-ext-${VERSION}.zip" >> $GITHUB_OUTPUT
+
+      - name: Create Release and upload zip
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.build.outputs.zip_path }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

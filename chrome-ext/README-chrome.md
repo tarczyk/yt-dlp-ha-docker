@@ -30,6 +30,8 @@ A Manifest V3 Chrome extension that lets you download YouTube videos to your Hom
 
 The extension icon will appear in the Chrome toolbar.
 
+**Or install from a zip:** On each [release](https://github.com/tarczyk/ha-yt-dlp/releases) you’ll find `ha-yt-dlp-chrome-ext-<version>.zip`. Download it, unzip, then in Chrome use **Load unpacked** and select the unzipped folder. You can also build the zip locally: from the repo root run `./chrome-ext/build-zip.sh`; the zip is created in `chrome-ext/`.
+
 ## Configuration
 
 1. Click the extension icon on any page
