@@ -1,3 +1,8 @@
+# Requirements: This workflow requires the following repository secrets to be configured:
+#   - DOCKERHUB_USERNAME: Your Docker Hub username (Settings → Secrets and variables → Actions)
+#   - DOCKERHUB_TOKEN:    Your Docker Hub access token (Settings → Secrets and variables → Actions)
+# The Docker Hub repository "ha-yt-dlp" must exist under the account specified by DOCKERHUB_USERNAME.
+# If the "Log in to Docker Hub" step fails, check that the above secrets are set and valid.
 name: Docker Build & Push
 
 on:
