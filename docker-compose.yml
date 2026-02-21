@@ -1,0 +1,9 @@
+services:
+  yt-dlp:
+    image: tarczyk/yt-dlp-ha-docker:latest  # Public image
+    container_name: yt-dlp-ha
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /media/youtube_downloads:/media/youtube_downloads

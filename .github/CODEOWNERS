@@ -1,0 +1,6 @@
+# CODEOWNERS
+# These owners will be requested for review when someone opens a pull request
+# that modifies files they own.
+
+*.yml @tarczyk
+*.yaml @tarczyk
