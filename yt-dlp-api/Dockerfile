@@ -1,4 +1,4 @@
-ARG BUILD_FROM
+ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
 FROM ${BUILD_FROM}
 
 RUN apk add --no-cache \
@@ -19,7 +19,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 COPY app/ ./app/
-COPY yt-dlp-api/run.sh /run.sh
+COPY run.sh /run.sh
 RUN chmod +x /run.sh
 
 EXPOSE 5000
