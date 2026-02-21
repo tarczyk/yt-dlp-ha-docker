@@ -1,6 +1,6 @@
 {
   "name": "yt-dlp-ha-card",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Home Assistant Lovelace card for ha-yt-dlp",
   "keywords": ["home-assistant", "lovelace", "custom-cards", "yt-dlp"],
   "repository": "https://github.com/tarczyk/ha-yt-dlp/tree/main/frontend/ha-card",

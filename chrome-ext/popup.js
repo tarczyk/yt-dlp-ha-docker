@@ -267,7 +267,9 @@ async function pollTask(haUrl, taskId) {
         const title = task.title ? `"${task.title}"` : 'File';
         chrome.storage.sync.get(STORAGE_KEY_HA_FRONTEND, (result) => {
           const haFrontend = (result[STORAGE_KEY_HA_FRONTEND] || '').trim().replace(/\/$/, '');
-          const mediaLinkUrl = haFrontend ? `${haFrontend}/media` : null;
+          // URL must be encoded: comma %2C, colon %3A, slashes %2F (HA Media Browser expects this)
+          const mediaPath = 'media-browser/browser/app%2Cmedia-source%3A%2F%2Fmedia_source';
+          const mediaLinkUrl = haFrontend ? `${haFrontend}/${mediaPath}` : null;
           setStatus('success', `Saved: ${title}`, {
             detail: `Folder: ${folderLabel}.`,
             mediaLinkUrl: mediaLinkUrl || undefined,
