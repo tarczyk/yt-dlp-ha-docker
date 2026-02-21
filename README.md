@@ -98,9 +98,54 @@ curl -X POST http://localhost:5000/download_video \
 
 ## Home Assistant Integration
 
-### 1. Expose the download directory as a media source
+Follow these numbered steps to set up a fully working yt-dlp integration with Home Assistant.
 
-Add the container's download volume to `configuration.yaml` so videos appear in the **Media Browser**:
+### Prerequisites
+
+- Docker and Docker Compose installed on the host machine
+- Home Assistant 2023.1 or newer
+- Network connectivity from Home Assistant to the Docker host on port `5000`
+
+---
+
+### Step 1 – Clone and configure the project
+
+```bash
+git clone https://github.com/tarczyk/yt-dlp-ha-docker.git
+cd yt-dlp-ha-docker
+```
+
+Open `.env` and confirm (or adjust) the settings:
+
+```dotenv
+API_PORT=5000
+DOWNLOAD_DIR=/config/media
+```
+
+> **Note:** `DOWNLOAD_DIR` must point to a path that is also mounted inside the Home Assistant container (typically `/config/media`).
+
+---
+
+### Step 2 – Start the container
+
+```bash
+docker compose up -d
+```
+
+Verify the service is healthy:
+
+```bash
+curl http://localhost:5000/health
+# {"status": "healthy"}
+```
+
+> **Different machines:** If Home Assistant and Docker run on **different hosts**, edit `docker-compose.yml` and change the port binding from `127.0.0.1:5000:5000` to `5000:5000` so that HA can reach the API over the network.  This exposes the port on all network interfaces — restrict access with a firewall rule (e.g. `ufw allow from <HA-IP> to any port 5000`) or place the API behind a reverse proxy (such as Nginx or Caddy) with authentication.
+
+---
+
+### Step 3 – Expose the download directory as a media source
+
+Add `media_dirs` to `configuration.yaml` so that downloaded videos appear in the **Media Browser**:
 
 ```yaml
 # configuration.yaml
@@ -109,22 +154,49 @@ homeassistant:
     youtube: /config/media
 ```
 
-Restart Home Assistant after adding the entry. The `youtube` source will then be browsable under **Media → My Media**.
+Restart Home Assistant. The `youtube` source will appear under **Media → My Media**.
 
-### 2. Trigger downloads from automations
+---
+
+### Step 4 – Add the REST command
+
+Add the REST command to `configuration.yaml` so that automations can trigger downloads:
 
 ```yaml
 # configuration.yaml
 rest_command:
   download_youtube_video:
-    url: "http://<your-docker-host>:5000/download_video"
+    url: "http://<docker-host>:5000/download_video"
     method: POST
-    headers:
-      Content-Type: application/json
+    content_type: "application/json"
     payload: '{"url": "{{ url }}"}'
 ```
 
-Use the REST command in an automation or script:
+Replace `<docker-host>` with the IP address or hostname of the machine running Docker (`localhost` if both run on the same host).
+
+Reload **Home Assistant Core configuration** (or restart HA) to apply the change.
+
+---
+
+### Step 5 – Add an input helper for the video URL
+
+Create a text helper that lets you enter a URL through the UI or automations:
+
+```yaml
+# configuration.yaml
+input_text:
+  youtube_url:
+    name: YouTube URL
+    max: 1000  # YouTube URLs with extra query parameters can be long; 1000 chars is a safe upper bound
+```
+
+Reload HA configuration to make the helper available.
+
+---
+
+### Step 6 – Trigger a download
+
+**From Developer Tools → Services:**
 
 ```yaml
 service: rest_command.download_youtube_video
@@ -132,7 +204,57 @@ data:
   url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
-### Screenshots
+**From an automation** (calls the service when the `input_text` changes):
+
+```yaml
+automation:
+  - alias: "Download YouTube video when URL is set"
+    trigger:
+      - platform: state
+        entity_id: input_text.youtube_url
+    condition:
+      - condition: template
+        value_template: "{{ trigger.to_state.state | length > 0 }}"
+    action:
+      - service: rest_command.download_youtube_video
+        data:
+          url: "{{ states('input_text.youtube_url') }}"
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.youtube_url
+        data:
+          value: ""
+```
+
+---
+
+### Step 7 – Monitor download status (optional)
+
+Add a REST sensor to track active tasks:
+
+```yaml
+# configuration.yaml
+sensor:
+  - platform: rest
+    name: "YT-DLP Tasks"
+    resource: "http://<docker-host>:5000/tasks"
+    method: GET
+    value_template: "{{ value_json | length }}"
+    scan_interval: 10
+```
+
+Check individual task status:
+
+```bash
+curl http://localhost:5000/tasks
+# [{"status": "completed", "url": "https://...", "title": "Rick Astley - Never Gonna Give You Up"}]
+```
+
+---
+
+### Step 8 – Browse downloaded files
+
+Once a download completes, the file appears in **Media → My Media → youtube** in the Home Assistant Media Browser.
 
 **Docker logs** (`docker compose logs -f`):
 
@@ -141,9 +263,19 @@ yt-dlp-api  | [download] Destination: /config/media/Rick Astley - Never Gonna Gi
 yt-dlp-api  | [download] 100% of   6.57MiB in 00:03
 ```
 
-**HA Media Browser** – after adding `media_dirs`, downloaded files appear under *My Media → youtube*:
-
 > 📁 Media Browser → My Media → youtube → `Rick Astley - Never Gonna Give You Up.mp4`
+
+---
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `curl: (7) Failed to connect` | Check that the container is running (`docker compose ps`) and that the port is reachable from HA |
+| `{"error": "invalid url"}` | Make sure the URL starts with `http://` or `https://` |
+| Files not appearing in Media Browser | Confirm `media_dirs` is set and HA was restarted; verify `DOWNLOAD_DIR` in `.env` matches the path in `configuration.yaml` |
+| Download fails with "Sign in to confirm" error | Update yt-dlp inside the container: `docker compose pull && docker compose up -d` |
+| Port not accessible from HA on another host | Change `127.0.0.1:5000:5000` to `5000:5000` in `docker-compose.yml` and restart the stack |
 
 ## Development
 
@@ -222,16 +354,3 @@ trivy image tarczyk/yt-dlp-ha-docker:latest
 ## License
 
 MIT
-🐳 Docker Compose yt-dlp API for Home Assistant with Node.js support. Downloads to `/media/youtube_downloads`. Compatible with the youtube_downloader integration.
-
-## Quick Start
-
-```bash
-docker pull tarczyk/yt-dlp-ha-docker
-```
-
-Or use Docker Compose:
-
-```bash
-docker compose up -d
-```
