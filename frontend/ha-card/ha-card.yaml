@@ -1,0 +1,4 @@
+---
+name: yt-dlp Downloader Card
+description: Lovelace card for yt-dlp-ha-docker – download YouTube videos directly from your Home Assistant dashboard.
+render_readme: true
