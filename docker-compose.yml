@@ -1,9 +1,21 @@
 services:
   yt-dlp:
-    image: tarczyk/yt-dlp-ha-docker:latest  # Public image
+    image: tarczyk/yt-dlp-ha-docker:latest
     container_name: yt-dlp-ha
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:5000:5000"
     volumes:
-      - /media/youtube_downloads:/media/youtube_downloads
+      - ./config/media:/config/media
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    read_only: true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    user: appuser

@@ -1,12 +1,25 @@
 import yt_dlp
 
 
-def download_video(url: str, output_dir: str = "/media/youtube_downloads", timeout: int = 300) -> dict:
+def download_video(url: str, output_dir: str = "/config/media", timeout: int = 1800) -> dict:
     """Download a video using yt-dlp and return info dict."""
     ydl_opts = {
         "outtmpl": f"{output_dir}/%(title)s.%(ext)s",
         "quiet": True,
         "socket_timeout": timeout,
+        # Keep yt-dlp's cache in /tmp so it works even when the container runs
+        # as a non-root user without a writable home directory.
+        "cachedir": "/tmp/yt-dlp",
+        # Use the TV HTML5 client which does not require a PO (Proof-of-Origin)
+        # token, avoiding YouTube's "Sign in to confirm you're not a bot" error
+        # in headless/CI environments.  The `yt-dlp-ejs` package (Node.js based
+        # EJS solver, installed via requirements.txt) handles the n-sig JS
+        # challenge so that the download actually succeeds.
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["tv", "default"],
+            },
+        },
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
