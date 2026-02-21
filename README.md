@@ -60,9 +60,9 @@ docker compose logs -f
 Example output:
 
 ```
-yt-dlp-api  |  * Running on http://0.0.0.0:5000
-yt-dlp-api  |  * Serving Flask app 'app'
-yt-dlp-api  |  * Debug mode: off
+yt-dlp-ha  |  * Running on http://0.0.0.0:5000
+yt-dlp-ha  |  * Serving Flask app 'app'
+yt-dlp-ha  |  * Debug mode: off
 ```
 
 ### Configuration
@@ -164,7 +164,9 @@ max_tasks: 10
 
 ## Home Assistant Integration (Docker Compose)
 
-Follow these numbered steps to integrate the Docker Compose deployment with Home Assistant.
+Use this section **only if you run the API via Option B – Docker Compose** (e.g. on a separate machine or a host without the add-on). If you installed the **add-on** (Option A), the API and media are already integrated in HA — skip this section.
+
+Follow these numbered steps to connect that Docker Compose deployment to Home Assistant (rest command, media source, optional automations).
 
 ### Prerequisites
 
