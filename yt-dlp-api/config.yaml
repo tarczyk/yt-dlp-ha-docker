@@ -1,6 +1,6 @@
 name: "yt-dlp API"
 description: "yt-dlp download API for Home Assistant. Provides REST endpoints used by the ha-yt-dlp Lovelace card."
-version: "1.0.4"
+version: "1.0.5"
 slug: "yt_dlp_api"
 url: "https://github.com/tarczyk/ha-yt-dlp"
 arch:
