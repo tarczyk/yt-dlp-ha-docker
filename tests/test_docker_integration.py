@@ -125,7 +125,13 @@ def test_download_video_creates_file(running_container):
 
     # Wait for the task to finish (up to 3 minutes for download + processing).
     status = _poll_task(_BASE_URL, task_id, timeout=180)
-    assert status == "completed", f"Download task ended with status: {status!r}"
+
+    # Fetch full task detail for a useful failure message.
+    detail = requests.get(f"{_BASE_URL}/tasks/{task_id}", timeout=10).json()
+    assert status == "completed", (
+        f"Download task ended with status: {status!r}. "
+        f"Task detail: {detail}"
+    )
 
     # Verify a file actually appeared in the mounted media directory.
     downloaded = [f for f in media_dir.iterdir() if f.is_file()]

@@ -8,7 +8,9 @@ RUN apk add --no-cache \
         unzip \
     && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
     && addgroup -S appgroup \
-    && adduser -S -G appgroup appuser
+    && adduser -S -G appgroup -h /home/appuser appuser \
+    && mkdir -p /home/appuser \
+    && chown appuser:appgroup /home/appuser
 
 RUN mkdir -p /config/media && chown appuser:appgroup /config/media
 
