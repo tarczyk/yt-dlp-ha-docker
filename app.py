@@ -1,14 +1,16 @@
-import logging
-import re
+import os
 import subprocess
+from urllib.parse import urlparse
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-DOWNLOAD_DIR = "/media/youtube_downloads"
-_URL_RE = re.compile(r"^https?://[^\s]+$")
+DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "/media/youtube_downloads")
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"})
 
 
 @app.route("/download", methods=["POST"])

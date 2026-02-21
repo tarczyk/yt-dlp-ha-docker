@@ -1,6 +1,8 @@
-FROM python:3.12-alpine
+FROM python:3.12-slim
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -9,11 +11,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app.py .
 
-RUN mkdir -p /media/youtube_downloads && \
-    chown -R appuser:appgroup /app
-
-USER appuser
-
-EXPOSE 5000
+EXPOSE 8080
 
 CMD ["python", "app.py"]

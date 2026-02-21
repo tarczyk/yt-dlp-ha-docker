@@ -1,4 +1,7 @@
 __pycache__/
 *.pyc
 *.pyo
+.coverage
+htmlcov/
+.pytest_cache/
 .env.local
