@@ -462,6 +462,61 @@ class YtDlpCard extends HTMLElement {
 
 customElements.define("yt-dlp-card", YtDlpCard);
 
+// Visual config editor (so "Show visual editor" shows fields instead of blank)
+class YtDlpCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = config || {};
+    this._render();
+  }
+
+  _render() {
+    const apiUrl = this._config.api_url || DEFAULT_API_URL;
+    const title = this._config.title !== undefined ? this._config.title : DEFAULT_TITLE;
+    const maxTasks = this._config.max_tasks !== undefined ? String(this._config.max_tasks) : String(DEFAULT_MAX_TASKS);
+
+    this.innerHTML = `
+      <style>
+        .yt-dlp-editor label { display: block; margin-top: 8px; font-weight: 500; color: var(--primary-text-color); }
+        .yt-dlp-editor input { display: block; width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+        .yt-dlp-editor .hint { font-size: 0.85rem; color: var(--secondary-text-color); margin-top: 4px; }
+      </style>
+      <div class="yt-dlp-editor">
+        <label>API URL</label>
+        <input type="text" id="api_url" value="${this._esc(apiUrl)}" placeholder="http://192.168.x.x:5000" />
+        <div class="hint">Adres addona yt-dlp API (ten sam host co HA, port 5000). Np. http://192.168.100.5:5000</div>
+        <label>Tytuł karty</label>
+        <input type="text" id="title" value="${this._esc(title)}" />
+        <label>Max zadań na liście</label>
+        <input type="number" id="max_tasks" min="1" max="20" value="${this._esc(maxTasks)}" />
+      </div>
+    `;
+
+    this.querySelector("#api_url").addEventListener("input", (e) => this._fire(e));
+    this.querySelector("#title").addEventListener("input", (e) => this._fire(e));
+    this.querySelector("#max_tasks").addEventListener("input", (e) => this._fire(e));
+  }
+
+  _esc(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  _fire() {
+    const config = {
+      api_url: this.querySelector("#api_url").value.trim() || DEFAULT_API_URL,
+      title: this.querySelector("#title").value.trim() || DEFAULT_TITLE,
+      max_tasks: parseInt(this.querySelector("#max_tasks").value, 10) || DEFAULT_MAX_TASKS,
+    };
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true }));
+  }
+}
+
+customElements.define("yt-dlp-card-editor", YtDlpCardEditor);
+
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "yt-dlp-card",
