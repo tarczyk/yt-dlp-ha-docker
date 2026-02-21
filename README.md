@@ -96,6 +96,49 @@ curl -X POST http://localhost:5000/download_video \
 | `202` | `{"status": "processing", "task_id": "..."}` | Download queued successfully |
 | `400` | `{"error": "..."}` | Missing or invalid request body |
 
+## 🎨 HA Lovelace Card (NEW!)
+
+A HACS-ready Lovelace card that connects directly to the yt-dlp-ha-docker API.
+
+### Install via HACS
+
+1. **HACS → Frontend → ⋮ → Custom repositories**
+2. Add: `https://github.com/tarczyk/yt-dlp-ha-docker` → Category: **Lovelace**
+3. Search for **yt-dlp Downloader Card** and install it.
+
+### Add to your dashboard
+
+```yaml
+type: custom:yt-dlp-card
+api_url: http://host.docker.internal:5000
+title: YouTube Downloader
+max_tasks: 10
+```
+
+### Configuration
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `api_url` | `http://localhost:5000` | Base URL of the Flask API |
+| `title` | `YouTube Downloader` | Card heading |
+| `max_tasks` | `5` | Maximum rows shown in the task list |
+
+### Card Features
+
+- **URL input** – paste any YouTube link
+- **📥 Download Now** – triggers `POST /download_video`
+- **Status badge** – color-coded: Processing (blue) · Completed (green) · Failed (red)
+- **Task list** – shows recent downloads (live-polled every 2 s)
+- **Progress bar** – per-task live progress from `GET /tasks/:id`
+- **Media link** – opens HA Media Browser at `/media/youtube_downloads`
+- **Responsive** – mobile + desktop layout
+
+### Screenshot
+
+![yt-dlp card mockup](frontend/ha-card/screenshot.png)
+
+---
+
 ## Home Assistant Integration
 
 ### 1. Expose the download directory as a media source
