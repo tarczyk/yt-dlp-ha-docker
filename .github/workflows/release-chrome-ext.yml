@@ -1,5 +1,5 @@
-# On tag push v*, build chrome-ext zip and attach to GitHub Release.
-name: Release Chrome extension zip
+# On tag push v*, build chrome-ext zip and attach both assets to GitHub Release.
+name: Release
 
 on:
   push:
@@ -23,10 +23,12 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "zip_path=chrome-ext/ha-yt-dlp-chrome-ext-${VERSION}.zip" >> $GITHUB_OUTPUT
 
-      - name: Create Release and upload zip
+      - name: Create Release and upload assets
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.build.outputs.zip_path }}
+          files: |
+            ${{ steps.build.outputs.zip_path }}
+            ha-yt-dlp.js
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
