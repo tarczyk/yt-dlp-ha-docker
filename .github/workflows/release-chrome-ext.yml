@@ -1,10 +1,17 @@
 # On tag push v*, build chrome-ext zip and attach both assets to GitHub Release.
+# Can also be triggered manually via workflow_dispatch with an optional release_tag input.
 name: Release
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag (e.g. v1.2.3). Leave empty if the workflow creates the tag/version automatically."
+        required: false
+        type: string
 
 jobs:
   release-ext:
@@ -13,6 +20,15 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.release_tag }}" ]; then
+            echo "effective_tag=${{ inputs.release_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "effective_tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build extension zip
         id: build
@@ -26,6 +42,7 @@ jobs:
       - name: Create Release and upload assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.effective_tag }}
           files: |
             ${{ steps.build.outputs.zip_path }}
             ha-yt-dlp.js
