@@ -1,0 +1,28 @@
+name: Check Release Created
+
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+
+jobs:
+  check-release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Verify release was created
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          echo "Checking release for tag: $TAG"
+          FOUND_TAG=$(gh api repos/${{ github.repository }}/releases/tags/$TAG --jq '.tag_name' 2>/dev/null || echo "")
+          if [ "$FOUND_TAG" = "$TAG" ]; then
+            echo "Release $TAG was successfully created."
+          else
+            echo "Release $TAG was NOT found!"
+            exit 1
+          fi
