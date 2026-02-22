@@ -25,6 +25,48 @@ def test_ytdlp_remote_components():
     )
 
 
+def test_download_video_mp3_uses_audio_format():
+    """Verify that format_type='mp3' sets bestaudio format and FFmpegExtractAudio postprocessor."""
+    from app.yt_dlp_manager import download_video
+
+    captured_opts = {}
+
+    def fake_ydl_class(opts):
+        captured_opts.update(opts)
+        instance = MagicMock()
+        instance.__enter__ = MagicMock(return_value=instance)
+        instance.__exit__ = MagicMock(return_value=False)
+        instance.extract_info.return_value = {"title": "Test"}
+        return instance
+
+    with patch("yt_dlp.YoutubeDL", side_effect=fake_ydl_class):
+        download_video("https://www.youtube.com/watch?v=dQw4w9WgXcQ", format_type="mp3")
+
+    assert captured_opts["format"] == "bestaudio/best"
+    assert any(p["key"] == "FFmpegExtractAudio" for p in captured_opts.get("postprocessors", []))
+
+
+def test_download_video_mp4_uses_video_format():
+    """Verify that format_type='mp4' sets the bestvideo+bestaudio format string."""
+    from app.yt_dlp_manager import download_video
+
+    captured_opts = {}
+
+    def fake_ydl_class(opts):
+        captured_opts.update(opts)
+        instance = MagicMock()
+        instance.__enter__ = MagicMock(return_value=instance)
+        instance.__exit__ = MagicMock(return_value=False)
+        instance.extract_info.return_value = {"title": "Test"}
+        return instance
+
+    with patch("yt_dlp.YoutubeDL", side_effect=fake_ydl_class):
+        download_video("https://www.youtube.com/watch?v=dQw4w9WgXcQ", format_type="mp4")
+
+    assert "mp4" in captured_opts["format"]
+    assert captured_opts.get("merge_output_format") == "mp4"
+
+
 def test_download_timeout():
     """Verify that a socket timeout triggers an exception during download."""
     from app.yt_dlp_manager import download_video

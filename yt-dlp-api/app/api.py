@@ -16,7 +16,7 @@ DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "/config/media")
 MEDIA_SUBDIR = os.environ.get("MEDIA_SUBDIR", "youtube_downloads")
 
 
-def _run_download(task_id: str, url: str) -> None:
+def _run_download(task_id: str, url: str, format_type: str = "mp4") -> None:
     def stop_check() -> bool:
         with _tasks_lock:
             return _tasks.get(task_id, {}).get("cancelled") is True
@@ -24,7 +24,7 @@ def _run_download(task_id: str, url: str) -> None:
     with _tasks_lock:
         _tasks[task_id]["status"] = "running"
     try:
-        info = download_video(url, output_dir=DOWNLOAD_DIR, stop_check=stop_check)
+        info = download_video(url, output_dir=DOWNLOAD_DIR, stop_check=stop_check, format_type=format_type)
         with _tasks_lock:
             _tasks[task_id]["status"] = "completed"
             _tasks[task_id]["title"] = info.get("title", "")
@@ -77,6 +77,9 @@ def config():
 def download_video_endpoint():
     data = request.get_json(silent=True) or {}
     url = data.get("url", "")
+    format_type = data.get("format", "mp4")
+    if format_type not in ("mp4", "mp3"):
+        format_type = "mp4"
     if not _is_valid_url(url):
         return jsonify({"error": "invalid url"}), 400
     if _is_playlist_url(url):
@@ -85,8 +88,8 @@ def download_video_endpoint():
         }), 400
     task_id = str(uuid.uuid4())
     with _tasks_lock:
-        _tasks[task_id] = {"task_id": task_id, "status": "queued", "url": url, "cancelled": False}
-    thread = threading.Thread(target=_run_download, args=(task_id, url), daemon=True)
+        _tasks[task_id] = {"task_id": task_id, "status": "queued", "url": url, "cancelled": False, "format": format_type}
+    thread = threading.Thread(target=_run_download, args=(task_id, url, format_type), daemon=True)
     thread.start()
     return jsonify({"status": "processing", "task_id": task_id}), 202
 

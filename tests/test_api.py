@@ -75,6 +75,55 @@ def test_files_list(client):
     assert isinstance(data, list)
 
 
+def test_download_video_mp3_format(client):
+    with patch("app.api._run_download") as mock_run:
+        response = client.post(
+            "/download_video",
+            json={"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "format": "mp3"},
+        )
+    assert response.status_code == 202
+    data = response.get_json()
+    assert "task_id" in data
+    task_id = data["task_id"]
+    # The task should store the format
+    import app.api as api_module
+    with api_module._tasks_lock:
+        task = api_module._tasks.get(task_id)
+    assert task is not None
+    assert task["format"] == "mp3"
+
+
+def test_download_video_mp4_format(client):
+    with patch("app.api._run_download") as mock_run:
+        response = client.post(
+            "/download_video",
+            json={"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "format": "mp4"},
+        )
+    assert response.status_code == 202
+    data = response.get_json()
+    task_id = data["task_id"]
+    import app.api as api_module
+    with api_module._tasks_lock:
+        task = api_module._tasks.get(task_id)
+    assert task is not None
+    assert task["format"] == "mp4"
+
+
+def test_download_video_invalid_format_defaults_to_mp4(client):
+    with patch("app.api._run_download"):
+        response = client.post(
+            "/download_video",
+            json={"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "format": "avi"},
+        )
+    assert response.status_code == 202
+    data = response.get_json()
+    task_id = data["task_id"]
+    import app.api as api_module
+    with api_module._tasks_lock:
+        task = api_module._tasks.get(task_id)
+    assert task["format"] == "mp4"
+
+
 def test_task_cancel(client):
     with patch("app.api._run_download"):
         post_resp = client.post(

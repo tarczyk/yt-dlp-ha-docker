@@ -5,6 +5,7 @@
 const POLL_INTERVAL_MS = 2000;
 const STORAGE_KEY_URL = 'haUrl';
 const STORAGE_KEY_HA_FRONTEND = 'haFrontendUrl';
+const STORAGE_KEY_FORMAT = 'format';
 
 let pollTimer = null;
 let currentTaskId = null;
@@ -14,6 +15,8 @@ let currentHaUrl = null;
 const haUrlInput       = document.getElementById('haUrl');
 const haFrontendInput  = document.getElementById('haFrontendUrl');
 const videoUrlInput    = document.getElementById('videoUrl');
+const formatMp4Radio   = document.getElementById('formatMp4');
+const formatMp3Radio   = document.getElementById('formatMp3');
 const downloadBtn      = document.getElementById('downloadBtn');
 const statusEl         = document.getElementById('status');
 const statusTextEl     = document.getElementById('statusText');
@@ -106,7 +109,7 @@ function toSingleVideoUrl(url) {
 // ── Init: load saved HA URL and auto-fill YouTube URL ─────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   // Load saved URLs from storage
-  chrome.storage.sync.get([STORAGE_KEY_URL, STORAGE_KEY_HA_FRONTEND], (result) => {
+  chrome.storage.sync.get([STORAGE_KEY_URL, STORAGE_KEY_HA_FRONTEND, STORAGE_KEY_FORMAT], (result) => {
     if (result[STORAGE_KEY_URL]) {
       haUrlInput.value = result[STORAGE_KEY_URL];
     } else {
@@ -114,6 +117,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (result[STORAGE_KEY_HA_FRONTEND]) {
       haFrontendInput.value = result[STORAGE_KEY_HA_FRONTEND];
+    }
+    if (result[STORAGE_KEY_FORMAT] === 'mp3') {
+      formatMp3Radio.checked = true;
+    } else {
+      formatMp4Radio.checked = true;
     }
   });
 
@@ -189,12 +197,14 @@ downloadBtn.addEventListener('click', async () => {
 
   // Send only the single-video URL (strip list= / start_radio=) so only this video is downloaded
   const singleVideoUrl = toSingleVideoUrl(videoUrl);
+  const selectedFormat = formatMp3Radio.checked ? 'mp3' : 'mp4';
 
   // Persist URLs
   const haFrontendUrl = haFrontendInput.value.trim();
   chrome.storage.sync.set({
     [STORAGE_KEY_URL]: haApiUrl,
     [STORAGE_KEY_HA_FRONTEND]: haFrontendUrl,
+    [STORAGE_KEY_FORMAT]: selectedFormat,
   });
 
   downloadBtn.disabled = true;
@@ -204,7 +214,7 @@ downloadBtn.addEventListener('click', async () => {
     const response = await fetch(`${haApiUrl}/download_video`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: singleVideoUrl }),
+      body: JSON.stringify({ url: singleVideoUrl, format: selectedFormat }),
     });
 
     const body = await response.json().catch(() => ({}));
