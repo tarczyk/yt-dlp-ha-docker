@@ -71,6 +71,16 @@ const STYLES = `
   .url-input:focus {
     border-color: var(--primary-color, #03a9f4);
   }
+  .format-select {
+    padding: 10px 8px;
+    border: 1px solid var(--divider-color, #e0e0e0);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: var(--card-background-color, #fff);
+    color: var(--primary-text-color);
+    outline: none;
+    cursor: pointer;
+  }
   .btn-download {
     padding: 10px 18px;
     background: var(--primary-color, #03a9f4);
@@ -204,6 +214,7 @@ class YtDlpCard extends HTMLElement {
     this._config = {};
     this._tasks = [];
     this._url = "";
+    this._format = "mp4";
     this._busy = false;
     this._message = null;
     this._pollHandle = null;
@@ -248,7 +259,7 @@ class YtDlpCard extends HTMLElement {
   _isPlaylistUrl(url) {
     try {
       const u = new URL(url.trim());
-      if (!u.hostname.includes("youtube.com")) return false;
+      if (u.hostname !== "youtube.com" && !u.hostname.endsWith(".youtube.com")) return false;
       if (u.pathname.includes("/playlist")) return true;
       return u.searchParams.has("list") && !u.searchParams.has("v");
     } catch {
@@ -329,7 +340,7 @@ class YtDlpCard extends HTMLElement {
       const resp = await fetch(this._apiUrl("/download_video"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: urlToSend }),
+        body: JSON.stringify({ url: urlToSend, format: this._format }),
       });
       const data = await resp.json();
       if (!resp.ok) {
@@ -377,6 +388,10 @@ class YtDlpCard extends HTMLElement {
             value="${this._esc(this._url)}"
             id="url-input"
           />
+          <select class="format-select" id="format-select">
+            <option value="mp4"${this._format === "mp4" ? " selected" : ""}>MP4 (Video)</option>
+            <option value="mp3"${this._format === "mp3" ? " selected" : ""}>MP3 (Audio)</option>
+          </select>
           <button
             class="btn-download"
             id="btn-download"
@@ -400,6 +415,9 @@ class YtDlpCard extends HTMLElement {
 
     root.getElementById("url-input").addEventListener("input", (e) => {
       this._url = e.target.value;
+    });
+    root.getElementById("format-select").addEventListener("change", (e) => {
+      this._format = e.target.value;
     });
     root.getElementById("btn-download").addEventListener("click", () => {
       this._handleDownload();
