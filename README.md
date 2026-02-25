@@ -131,9 +131,13 @@ curl -X POST http://localhost:5000/download_video \
 
 Manifest V3 extension in [chrome-ext/](chrome-ext/).
 
-1. Open `chrome://extensions/` → **Developer mode** → **Load unpacked** → select `chrome-ext/`.
+**Install from the Chrome Web Store (recommended):**
+
+1. Open the [HA yt-dlp Downloader](https://chrome.google.com/webstore/detail/ha-yt-dlp-downloader) listing and click **Add to Chrome**.
 2. In the extension, open **Settings** and set your API URL (e.g. `http://192.168.1.100:5000`).
 3. On a YouTube video page, open the extension → **Download to HA**.
+
+**Manual install (Developer Mode):** open `chrome://extensions/` → **Developer mode** → **Load unpacked** → select `chrome-ext/`.
 
 Full doc: [chrome-ext/README-chrome.md](chrome-ext/README-chrome.md).
 

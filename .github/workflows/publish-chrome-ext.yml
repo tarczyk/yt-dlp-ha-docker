@@ -1,0 +1,43 @@
+# Publish the Chrome extension to the Chrome Web Store after a GitHub Release is published.
+#
+# Required repository secrets:
+#   CHROME_EXTENSION_ID    – The extension's ID from the Chrome Web Store (omit after first publish)
+#   CHROME_CLIENT_ID       – OAuth2 client ID (Google Cloud Console → APIs & Services → Credentials)
+#   CHROME_CLIENT_SECRET   – OAuth2 client secret
+#   CHROME_REFRESH_TOKEN   – OAuth2 refresh token (see docs/chrome-webstore-publish.md)
+name: Publish Chrome Extension
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to publish (e.g. v1.2.3)"
+        required: false
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build extension zip
+        id: build
+        run: |
+          cd chrome-ext
+          VERSION=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' manifest.json | head -1)
+          ZIP="ha-yt-dlp-chrome-ext-${VERSION}.zip"
+          zip -r "$ZIP" . -x "*.zip" -x ".git*" -x "*.gitkeep" -x "build-zip.sh" -x "screenshots/*" -x "README-chrome.md"
+          echo "zip_path=chrome-ext/${ZIP}" >> $GITHUB_OUTPUT
+
+      - name: Upload to Chrome Web Store
+        uses: mnao305/chrome-extension-upload-action@v5.0.0
+        with:
+          file-path: ${{ steps.build.outputs.zip_path }}
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          publish: true

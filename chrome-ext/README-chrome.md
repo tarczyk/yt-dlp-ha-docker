@@ -21,16 +21,26 @@ A Manifest V3 Chrome extension that lets you download YouTube videos to your Hom
 | `storage` | Persist the HA API URL via `chrome.storage.sync` |
 | `host_permissions` (`http://*/*`, `https://*/*`) | The HA API URL is user-configured at runtime and can be any private IP/hostname. Because the target URL is unknown at install time, a broad pattern is required. No requests are ever sent to third-party servers. |
 
-## Install (Developer Mode)
+## Install from the Chrome Web Store (recommended)
+
+> The extension is published on the Chrome Web Store – no Developer Mode required.
+
+1. Open the [HA yt-dlp Downloader](https://chrome.google.com/webstore/detail/ha-yt-dlp-downloader) listing.
+2. Click **Add to Chrome**.
+3. Confirm the permission prompt.
+
+The extension icon will appear in the Chrome toolbar immediately.
+
+## Install (Developer Mode / manual)
+
+Use this method if you want to test a local build or an unreleased version.
 
 1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable **Developer mode** (toggle in the top-right corner)
 3. Click **Load unpacked**
 4. Select the `chrome-ext/` folder from your `ha-yt-dlp` checkout
 
-The extension icon will appear in the Chrome toolbar.
-
-**Or install from a zip:** On each [release](https://github.com/tarczyk/ha-yt-dlp/releases) you’ll find `ha-yt-dlp-chrome-ext-<version>.zip`. Download it, unzip, then in Chrome use **Load unpacked** and select the unzipped folder. You can also build the zip locally: from the repo root run `./chrome-ext/build-zip.sh`; the zip is created in `chrome-ext/`.
+**Or install from a release zip:** On each [release](https://github.com/tarczyk/ha-yt-dlp/releases) you’ll find `ha-yt-dlp-chrome-ext-<version>.zip`. Download it, unzip, then in Chrome use **Load unpacked** and select the unzipped folder. You can also build the zip locally: from the repo root run `./chrome-ext/build-zip.sh`; the zip is created in `chrome-ext/`.
 
 ## Configuration
 
@@ -49,14 +59,13 @@ The extension icon will appear in the Chrome toolbar.
 
 ## Chrome Web Store
 
-> **Privacy:** The extension stores only the HA API URL in `chrome.storage.sync`. No data is sent to third parties. All network requests go directly to the user-configured local API.
+The extension is listed on the Chrome Web Store under the **Productivity** category.
 
-Planned listing category: **Productivity**
+- **Privacy policy:** [docs/privacy-policy.md](../docs/privacy-policy.md)
+- **Automated publishing:** each GitHub Release triggers `.github/workflows/publish-chrome-ext.yml` which builds the zip and uploads it to the Chrome Web Store via the Publish API.
+- **Setup guide:** see [docs/chrome-webstore-publish.md](../docs/chrome-webstore-publish.md) for one-time credentials setup.
 
-Required assets for submission:
-- 3 screenshots (1280×800 or 640×400 px) – see `screenshots/`
-- Promotional tile 440×280 px
-- Privacy policy URL
+> No data is sent to third parties. All network requests go directly to the user-configured local API.
 
 ## Folder Structure
 
