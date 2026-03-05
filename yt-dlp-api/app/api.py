@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 from flask import Blueprint, jsonify, request
 
-from .yt_dlp_manager import DownloadCancelledError, download_video
+from .yt_dlp_manager import DownloadCancelledError, check_ytdlp_version, download_video
 
 api = Blueprint("api", __name__)
 
@@ -96,7 +96,11 @@ def download_video_endpoint():
         _tasks[task_id] = {"task_id": task_id, "status": "queued", "url": url, "cancelled": False, "format": format_type}
     thread = threading.Thread(target=_run_download, args=(task_id, url, format_type), daemon=True)
     thread.start()
-    return jsonify({"status": "processing", "task_id": task_id}), 202
+    response: dict = {"status": "processing", "task_id": task_id}
+    version_info = check_ytdlp_version()
+    if version_info.get("is_outdated") and version_info.get("warning"):
+        response["yt_dlp_warning"] = version_info["warning"]
+    return jsonify(response), 202
 
 
 @api.route("/tasks", methods=["GET"])

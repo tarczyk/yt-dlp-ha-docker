@@ -1,5 +1,8 @@
+import json
 import logging
 import sys
+import urllib.error
+import urllib.request
 from typing import Callable
 
 import yt_dlp
@@ -7,6 +10,68 @@ import yt_dlp
 
 class DownloadCancelledError(Exception):
     """Raised when the user cancels the download via API."""
+
+
+_YTDLP_GITHUB_API = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest"
+
+# Process-lifetime cache so we hit GitHub at most once per run.
+_version_cache: dict[str, str | bool | None] = {}
+
+
+def _parse_version(v: str) -> tuple:
+    """Convert a version string like '2024.12.23' to a comparable tuple of ints."""
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except ValueError:
+        return (0,)
+
+
+def check_ytdlp_version(timeout: int = 5) -> dict[str, str | bool | None]:
+    """Compare the installed yt-dlp version with the latest GitHub release.
+
+    Returns a dict with keys:
+      - ``local``      – installed version string
+      - ``latest``     – latest release tag from GitHub (or None on error)
+      - ``is_outdated``– True when local < latest
+      - ``warning``    – human-readable warning string (or None)
+
+    Results are cached for the process lifetime to avoid repeated API calls.
+    """
+    global _version_cache
+    if _version_cache:
+        return _version_cache
+
+    local_version: str = yt_dlp.version.__version__
+    latest_version: str | None = None
+    is_outdated = False
+    warning: str | None = None
+
+    try:
+        req = urllib.request.Request(
+            _YTDLP_GITHUB_API,
+            headers={"User-Agent": "ha-yt-dlp/version-check"},
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read())
+        latest_version = data.get("tag_name", "").lstrip("v")
+        if latest_version and _parse_version(local_version) < _parse_version(latest_version):
+            is_outdated = True
+            warning = (
+                f"yt-dlp is outdated (installed: {local_version}, latest: {latest_version}). "
+                "YouTube downloads may fail. Run update (yt-dlp -U) or contact admin."
+            )
+            logging.getLogger(__name__).warning(warning)
+    except Exception as exc:
+        logging.getLogger(__name__).debug("Could not check yt-dlp version: %s", exc)
+
+    result: dict[str, str | bool | None] = {
+        "local": local_version,
+        "latest": latest_version,
+        "is_outdated": is_outdated,
+        "warning": warning,
+    }
+    _version_cache = result
+    return result
 
 
 def _yt_dlp_logger():
