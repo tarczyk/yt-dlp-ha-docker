@@ -17,6 +17,7 @@ Home Assistant add-on and Lovelace card that download YouTube videos via **yt-dl
 - [Installation](#installation)
   - [Option A – Home Assistant Add-on](#option-a--home-assistant-add-on-recommended)
   - [Option B – Docker Compose (standalone)](#option-b--docker-compose-standalone)
+  - [Option C – Windows (Docker Desktop)](#option-c--windows-docker-desktop)
 - [API reference](#api-reference)
 - [Chrome extension](#chrome-extension)
 - [Lovelace card](#lovelace-card)
@@ -105,6 +106,30 @@ curl -X POST http://localhost:5000/download_video \
   -H "Content-Type: application/json" \
   -d '{"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'
 ```
+
+---
+
+### Option C – Windows (Docker Desktop)
+
+**Requires:** [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop).
+
+See the full step-by-step guide: [docs/windows-installation.md](docs/windows-installation.md).
+
+Quick start:
+
+1. Install **Docker Desktop** and make sure it is running.
+2. Clone the repo (or download the ZIP):
+   ```powershell
+   git clone https://github.com/tarczyk/ha-yt-dlp.git
+   cd ha-yt-dlp
+   ```
+3. Edit `.env` – set `DOWNLOAD_DIR` to a Windows path (e.g. `C:/Users/YourName/Videos/youtube_downloads`).
+4. Update the `volumes` line in `docker-compose.yml` to use `${DOWNLOAD_DIR}:/config/media`.
+5. Start the container:
+   ```powershell
+   docker compose up -d --build
+   ```
+6. Verify: `curl http://localhost:5000/health` → `{"status": "healthy"}`
 
 ---
 
