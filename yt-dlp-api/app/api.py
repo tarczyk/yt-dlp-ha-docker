@@ -5,12 +5,29 @@ from urllib.parse import urlparse
 
 from flask import Blueprint, jsonify, request
 
-from .yt_dlp_manager import DownloadCancelledError, check_ytdlp_version, download_video
+from .updater import Updater
+from .yt_dlp_manager import (
+    DownloadCancelledError,
+    TASK_STATUS_DOWNLOADING,
+    TASK_STATUS_UPDATING,
+    TASK_STATUS_COMPLETED,
+    TASK_STATUS_FAILED,
+    check_ytdlp_version,
+    download_video,
+)
 
 api = Blueprint("api", __name__)
 
 _tasks: dict[str, dict] = {}
 _tasks_lock = threading.Lock()
+
+_updater: Updater | None = None
+
+
+def init_updater(updater: Updater) -> None:
+    """Called by create_app() to inject the shared Updater instance."""
+    global _updater
+    _updater = updater
 
 DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "/config/media")
 MEDIA_SUBDIR = os.environ.get("MEDIA_SUBDIR", "youtube_downloads")
@@ -22,7 +39,7 @@ def _run_download(task_id: str, url: str, format_type: str = "mp4") -> None:
             return _tasks.get(task_id, {}).get("cancelled") is True
 
     with _tasks_lock:
-        _tasks[task_id]["status"] = "running"
+        _tasks[task_id]["status"] = TASK_STATUS_DOWNLOADING
     try:
         formats = ["mp4", "mp3"] if format_type == "both" else [format_type]
         info = {}
@@ -31,16 +48,50 @@ def _run_download(task_id: str, url: str, format_type: str = "mp4") -> None:
                 raise DownloadCancelledError("Cancelled by user")
             info = download_video(url, output_dir=DOWNLOAD_DIR, stop_check=stop_check, format_type=fmt)
         with _tasks_lock:
-            _tasks[task_id]["status"] = "completed"
+            _tasks[task_id]["status"] = TASK_STATUS_COMPLETED
             _tasks[task_id]["title"] = info.get("title", "")
     except DownloadCancelledError:
         with _tasks_lock:
             _tasks[task_id]["status"] = "cancelled"
             _tasks[task_id]["error"] = "Cancelled by user"
     except Exception as exc:
+        error_str = str(exc)
+        if _updater is not None and _updater.contains_error_signal(error_str):
+            _trigger_adhoc_update_and_retry(task_id, url, format_type, error_str, stop_check)
+        else:
+            with _tasks_lock:
+                _tasks[task_id]["status"] = TASK_STATUS_FAILED
+                _tasks[task_id]["error"] = error_str
+
+
+def _trigger_adhoc_update_and_retry(
+    task_id: str, url: str, format_type: str, original_error: str, stop_check
+) -> None:
+    """Called when download fails with a recognized error signal."""
+    with _tasks_lock:
+        _tasks[task_id]["status"] = TASK_STATUS_UPDATING
+
+    result = _updater.update_if_needed("ad-hoc")  # type: ignore[union-attr]
+
+    if not result.success:
         with _tasks_lock:
-            _tasks[task_id]["status"] = "error"
-            _tasks[task_id]["error"] = str(exc)
+            _tasks[task_id]["status"] = TASK_STATUS_FAILED
+            _tasks[task_id]["error"] = original_error
+        return
+
+    # Update succeeded — retry the download
+    try:
+        formats = ["mp4", "mp3"] if format_type == "both" else [format_type]
+        info = {}
+        for fmt in formats:
+            info = download_video(url, output_dir=DOWNLOAD_DIR, format_type=fmt, stop_check=stop_check)
+        with _tasks_lock:
+            _tasks[task_id]["status"] = TASK_STATUS_COMPLETED
+            _tasks[task_id]["title"] = info.get("title", "")
+    except Exception as retry_exc:
+        with _tasks_lock:
+            _tasks[task_id]["status"] = TASK_STATUS_FAILED
+            _tasks[task_id]["error"] = str(retry_exc)
 
 
 def _is_valid_url(url: str) -> bool:
@@ -124,11 +175,10 @@ def task_cancel(task_id: str):
     """Request cancellation of a queued or running task. Idempotent."""
     with _tasks_lock:
         task = _tasks.get(task_id)
-    if task is None:
-        return jsonify({"error": "task not found"}), 404
-    if task["status"] not in ("queued", "running"):
-        return jsonify({"status": task["status"], "message": "Task already finished."}), 200
-    with _tasks_lock:
+        if task is None:
+            return jsonify({"error": "task not found"}), 404
+        if task["status"] not in ("queued", TASK_STATUS_DOWNLOADING, TASK_STATUS_UPDATING):
+            return jsonify({"status": task["status"], "message": "Task already finished."}), 200
         task["cancelled"] = True
     return jsonify({"status": "cancelling", "message": "Cancellation requested."}), 200
 

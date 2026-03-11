@@ -7,6 +7,12 @@ from typing import Callable
 
 import yt_dlp
 
+# Task status constants — single source of truth; never use inline strings in new code paths
+TASK_STATUS_DOWNLOADING = "downloading"
+TASK_STATUS_UPDATING = "updating"
+TASK_STATUS_COMPLETED = "completed"
+TASK_STATUS_FAILED = "failed"
+
 
 class DownloadCancelledError(Exception):
     """Raised when the user cancels the download via API."""

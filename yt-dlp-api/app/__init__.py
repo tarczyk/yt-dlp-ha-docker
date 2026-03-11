@@ -8,6 +8,11 @@ def create_app() -> Flask:
     from .api import api
     app.register_blueprint(api)
 
+    # Initialize Updater (loads /data/update-state.json; gracefully handles missing file)
+    from .updater import Updater
+    from .api import init_updater
+    init_updater(Updater())
+
     # Kick off a background version check at startup so the cache is warm
     # and a WARNING is emitted early if yt-dlp is outdated.
     from .yt_dlp_manager import check_ytdlp_version
