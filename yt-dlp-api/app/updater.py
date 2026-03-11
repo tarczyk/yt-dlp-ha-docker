@@ -21,6 +21,8 @@ import re
 import subprocess
 import tempfile
 import threading
+import time
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -209,6 +211,7 @@ class Updater:
                 self._state["last_error"] = error_msg
                 self._save_state()
                 logger.error("[UPDATER] Update failed: %s", error_msg)
+                self._send_ha_notification(error_msg, reason)
                 return UpdateResult(success=False, version_before=version_before, error=error_msg)
 
         except subprocess.TimeoutExpired:
@@ -217,6 +220,7 @@ class Updater:
             self._state["last_error"] = error_msg
             self._save_state()
             logger.error("[UPDATER] Update failed: %s", error_msg)
+            self._send_ha_notification(error_msg, reason)
             return UpdateResult(success=False, version_before=version_before, error=error_msg)
 
         except Exception as exc:  # noqa: BLE001
@@ -225,6 +229,7 @@ class Updater:
             self._state["last_error"] = error_msg
             self._save_state()
             logger.error("[UPDATER] Update failed with unexpected error: %s", exc)
+            self._send_ha_notification(error_msg, reason)
             return UpdateResult(success=False, version_before=version_before, error=error_msg)
 
         finally:
@@ -240,15 +245,38 @@ class Updater:
         Args:
             error_type: Human-readable error description (e.g. "timeout after 120s")
             reason: "scheduled" | "ad-hoc"
-
-        Full HTTP implementation added in Story 2.2.
         """
         token = os.environ.get("SUPERVISOR_TOKEN")
         if not token:
             logger.warning("[HA-NOTIFY] SUPERVISOR_TOKEN not set — log only mode")
             return
-        # Story 2.2: POST /core/api/services/persistent_notification/create
-        logger.info("[HA-NOTIFY] Notification scaffold — Story 2.2 implements HTTP call")
+
+        current_version = self._state.get("current_version", "unknown")
+        timestamp_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        message = f"{error_type}. yt-dlp: {current_version}. {timestamp_utc}"
+        payload = json.dumps({
+            "title": "⚠️ ha-yt-dlp",
+            "message": message,
+        }).encode("utf-8")
+
+        url = "http://supervisor/core/api/services/persistent_notification/create"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+        req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+
+        for attempt in range(2):
+            try:
+                with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: F841
+                    logger.info("[HA-NOTIFY] Notification sent (reason=%s)", reason)
+                    return
+            except Exception as exc:
+                logger.warning("[HA-NOTIFY] Failed to send notification (attempt %d/2): %s", attempt + 1, exc)
+            if attempt == 0:
+                time.sleep(5)
+
+        logger.critical("[HA-NOTIFY] Failed to send HA notification after retry")
 
     # ------------------------------------------------------------------
     # Internal helpers

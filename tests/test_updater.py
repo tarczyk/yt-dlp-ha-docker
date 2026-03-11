@@ -524,3 +524,144 @@ class TestStaleUpdatingStateRecovery:
         updater = Updater(state_path=str(state_path))
 
         assert updater.get_update_status()["update_status"] == "failed"
+
+
+# ---------------------------------------------------------------------------
+# Story 2.2 — HA Persistent Notification (AC1–AC7)
+# ---------------------------------------------------------------------------
+
+class TestHaNotification:
+    """Story 2.2 tests: _send_ha_notification() + integration with update_if_needed()."""
+
+    @staticmethod
+    def _mock_urlopen_success():
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        return mock_resp
+
+    # 3.1 — SUPERVISOR_TOKEN set + update timeout → urlopen called with correct URL/headers
+    def test_timeout_fires_notification_with_correct_url_and_headers(self, tmp_path, ha_supervisor_token):
+        updater = Updater(state_path=str(tmp_path / "state.json"))
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="pip", timeout=120)):
+            with patch("urllib.request.urlopen", return_value=self._mock_urlopen_success()) as mock_open:
+                with patch("time.sleep"):
+                    updater.update_if_needed("scheduled")
+        mock_open.assert_called()
+        req = mock_open.call_args[0][0]
+        assert req.full_url == "http://supervisor/core/api/services/persistent_notification/create"
+        assert req.get_header("Authorization") == f"Bearer {ha_supervisor_token}"
+        assert req.get_header("Content-type") == "application/json"
+
+    # 3.2 — SUPERVISOR_TOKEN set + non-zero returncode → notification fired
+    def test_nonzero_returncode_fires_notification(self, tmp_path, ha_supervisor_token):
+        updater = Updater(state_path=str(tmp_path / "state.json"))
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stderr = "error"
+        with patch("subprocess.run", return_value=mock_result):
+            with patch("urllib.request.urlopen", return_value=self._mock_urlopen_success()) as mock_open:
+                updater.update_if_needed("ad-hoc")
+        mock_open.assert_called()
+
+    # 3.3 — first HTTP call raises URLError, second succeeds → no logger.critical
+    def test_retry_on_first_failure_no_critical_log(self, tmp_path, ha_supervisor_token, caplog):
+        import logging
+        from urllib.error import URLError
+        updater = Updater(state_path=str(tmp_path / "state.json"))
+        call_count = [0]
+
+        def urlopen_side_effect(req, timeout=None):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise URLError("connection refused")
+            return self._mock_urlopen_success()
+
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="pip", timeout=120)):
+            with patch("urllib.request.urlopen", side_effect=urlopen_side_effect):
+                with patch("time.sleep"):
+                    with caplog.at_level(logging.CRITICAL):
+                        updater.update_if_needed("scheduled")
+
+        assert call_count[0] == 2
+        assert not any(r.levelno == logging.CRITICAL for r in caplog.records)
+
+    # 3.4 — both HTTP calls fail → logger.critical with [HA-NOTIFY] message
+    def test_both_retries_fail_logs_critical(self, tmp_path, ha_supervisor_token, caplog):
+        import logging
+        from urllib.error import URLError
+        updater = Updater(state_path=str(tmp_path / "state.json"))
+
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="pip", timeout=120)):
+            with patch("urllib.request.urlopen", side_effect=URLError("connection refused")):
+                with patch("time.sleep"):
+                    with caplog.at_level(logging.CRITICAL):
+                        updater.update_if_needed("scheduled")
+
+        assert any(
+            "[HA-NOTIFY] Failed to send HA notification after retry" in r.message
+            for r in caplog.records
+        )
+
+    # 3.5 — SUPERVISOR_TOKEN not set → no HTTP call, warning with [HA-NOTIFY]
+    def test_no_token_no_http_call_warning_logged(self, tmp_path, no_supervisor_token, caplog):
+        import logging
+        updater = Updater(state_path=str(tmp_path / "state.json"))
+
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="pip", timeout=120)):
+            with patch("urllib.request.urlopen") as mock_open:
+                with caplog.at_level(logging.WARNING):
+                    updater.update_if_needed("scheduled")
+
+        mock_open.assert_not_called()
+        assert any("[HA-NOTIFY] SUPERVISOR_TOKEN not set" in r.message for r in caplog.records)
+
+    # 3.6 — update succeeds → _send_ha_notification NOT called (AC4)
+    def test_update_success_no_notification(self, tmp_path, ha_supervisor_token):
+        updater = Updater(state_path=str(tmp_path / "state.json"))
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        with patch("subprocess.run", return_value=mock_result):
+            with patch.object(updater, "_get_installed_version", return_value="2026.03.10"):
+                with patch.object(updater, "_send_ha_notification") as mock_notify:
+                    result = updater.update_if_needed("scheduled")
+        assert result.success is True
+        mock_notify.assert_not_called()
+
+    # 3.8 — generic Exception failure path (e.g. pip not found) triggers HA notification (AC6)
+    def test_generic_exception_fires_notification(self, tmp_path, ha_supervisor_token):
+        updater = Updater(state_path=str(tmp_path / "state.json"))
+        with patch("subprocess.run", side_effect=FileNotFoundError("pip not found")):
+            with patch("urllib.request.urlopen", return_value=self._mock_urlopen_success()) as mock_open:
+                result = updater.update_if_needed("scheduled")
+        assert result.success is False
+        assert "pip not found" in result.error
+        mock_open.assert_called()
+
+    # 3.7 — notification payload contains error_type, current_version, UTC timestamp (AC1/FR18)
+    def test_notification_payload_contains_required_fields(self, tmp_path, ha_supervisor_token):
+        import re as re_mod
+        state_path = tmp_path / "state.json"
+        existing = {
+            "current_version": "2026.03.07",
+            "latest_version": "2026.03.07",
+            "update_status": "ok",
+            "last_update_attempt": None,
+            "last_successful_update": None,
+            "last_error": None,
+        }
+        state_path.write_text(json.dumps(existing))
+        updater = Updater(state_path=str(state_path))
+
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="pip", timeout=120)):
+            with patch("urllib.request.urlopen", return_value=self._mock_urlopen_success()) as mock_open:
+                with patch("time.sleep"):
+                    updater.update_if_needed("scheduled")
+
+        req = mock_open.call_args[0][0]
+        payload = json.loads(req.data.decode("utf-8"))
+        assert payload["title"] == "⚠️ ha-yt-dlp"
+        assert "timeout after 120s" in payload["message"]
+        assert "2026.03.07" in payload["message"]
+        assert re_mod.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", payload["message"])
