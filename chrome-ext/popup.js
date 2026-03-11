@@ -11,6 +11,10 @@ let pollTimer = null;
 let currentTaskId = null;
 let currentHaUrl = null;
 
+// Health cache key — persisted in chrome.storage.session so cache survives popup close/reopen (AC6)
+const HEALTH_CACHE_TTL_MS = 60000;
+const HEALTH_CACHE_STORAGE_KEY = '_healthCache';
+
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 const haUrlInput       = document.getElementById('haUrl');
 const haFrontendInput  = document.getElementById('haFrontendUrl');
@@ -27,6 +31,56 @@ const mediaLinkEl      = document.getElementById('mediaLink');
 const cancelBtn        = document.getElementById('cancelBtn');
 const settingsToggle   = document.getElementById('settingsToggle');
 const settingsPanel    = document.getElementById('settingsPanel');
+const systemStatusEl   = document.getElementById('systemStatus');
+
+// ── System status (from /health) ─────────────────────────────────────────────
+
+function renderSystemStatus(updateStatus) {
+  if (updateStatus === 'ok') {
+    systemStatusEl.textContent = '✅ System gotowy';
+    systemStatusEl.className = 'ok';
+  } else {
+    // 'failed' or 'updating' both show the warning — Beatka cannot act on either
+    systemStatusEl.textContent = '⚠️ System wymaga uwagi — skontaktuj się z administratorem';
+    systemStatusEl.className = 'warning';
+  }
+  systemStatusEl.style.display = 'block';
+}
+
+async function fetchAndRenderHealth(haUrl) {
+  // Read persistent cache from chrome.storage.session (survives popup close/reopen per AC6)
+  const cached = await new Promise(resolve =>
+    chrome.storage.session.get(HEALTH_CACHE_STORAGE_KEY, r =>
+      resolve(r[HEALTH_CACHE_STORAGE_KEY] || null)
+    )
+  );
+  const now = Date.now();
+  if (cached && (now - cached.timestamp) < HEALTH_CACHE_TTL_MS) {
+    renderSystemStatus(cached.updateStatus);
+    return;
+  }
+
+  // Fetch with 1500ms timeout to meet NFR5 (status within 2s)
+  const controller = new AbortController();
+  const fetchTimeout = setTimeout(() => controller.abort(), 1500);
+  try {
+    const res = await fetch(`${haUrl}/health`, { signal: controller.signal });
+    clearTimeout(fetchTimeout);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const updateStatus = data.update_status || 'ok';  // AC7: default to 'ok' if field missing
+    chrome.storage.session.set({ [HEALTH_CACHE_STORAGE_KEY]: { updateStatus, timestamp: now } });
+    renderSystemStatus(updateStatus);
+  } catch (_) {
+    clearTimeout(fetchTimeout);
+    // Show last known status on error (stale cache) rather than hiding (better UX)
+    if (cached) {
+      renderSystemStatus(cached.updateStatus);
+    } else {
+      systemStatusEl.style.display = 'none';
+    }
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function setStatus(state, message, options) {
@@ -110,8 +164,10 @@ function toSingleVideoUrl(url) {
 document.addEventListener('DOMContentLoaded', () => {
   // Load saved URLs from storage
   chrome.storage.sync.get([STORAGE_KEY_URL, STORAGE_KEY_HA_FRONTEND, STORAGE_KEY_FORMAT], (result) => {
-    if (result[STORAGE_KEY_URL]) {
-      haUrlInput.value = result[STORAGE_KEY_URL];
+    const savedHaUrl = (result[STORAGE_KEY_URL] || '').trim().replace(/\/$/, '');
+    if (savedHaUrl) {
+      haUrlInput.value = savedHaUrl;
+      fetchAndRenderHealth(savedHaUrl);
     } else {
       settingsPanel.classList.add('open');
     }
@@ -303,7 +359,27 @@ async function pollTask(haUrl, taskId) {
         setStatus('processing', 'Queued…', { detail: 'Waiting for the server to start the download.' });
         break;
 
-      case 'running':
+      case 'downloading':
+        setStatus('processing', 'Downloading…', {
+          detail: 'The file is being downloaded. You can close this popup; the download continues on the server.',
+        });
+        break;
+
+      case 'updating':
+        setStatus('processing', 'Aktualizuję system...', {
+          detail: 'Trwa aktualizacja yt-dlp. Pobieranie zostanie wznowione automatycznie.',
+        });
+        break;
+
+      case 'failed':
+        stopPolling();
+        currentTaskId = null;
+        currentHaUrl = null;
+        setStatus('error', '⚠️ System wymaga uwagi — skontaktuj się z administratorem', {});
+        downloadBtn.disabled = false;
+        break;
+
+      case 'running':  // backward compat — old backend versions
       default:
         setStatus('processing', 'Downloading…', {
           detail: 'The file is being downloaded. You can close this popup; the download continues on the server.',

@@ -158,6 +158,25 @@
       background: var(--md-surface-variant);
       color: var(--md-on-surface-variant);
     }
+    #systemStatus {
+      display: none; /* hidden by default; shown by renderSystemStatus */
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: var(--md-radius-sm);
+      margin-top: 8px;
+    }
+    #systemStatus.ok {
+      background: #e6f4ea;
+      color: var(--md-success);
+    }
+    #systemStatus.warning {
+      background: #fce8e6;
+      color: var(--md-error);
+    }
+    @media (prefers-color-scheme: dark) {
+      #systemStatus.ok      { background: #0d3520; color: #81c995; }
+      #systemStatus.warning { background: #5c1c1c; color: #f28b82; }
+    }
     .cancel-btn {
       margin-left: auto;
       padding: 4px 10px;
@@ -249,6 +268,8 @@
     </svg>
     Download to HA
   </button>
+
+  <div id="systemStatus" style="display:none;"></div>
 
   <div id="status">
     <div class="status-row">
