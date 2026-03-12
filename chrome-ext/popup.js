@@ -11,7 +11,7 @@ let pollTimer = null;
 let currentTaskId = null;
 let currentHaUrl = null;
 
-// Health cache key — persisted in chrome.storage.session so cache survives popup close/reopen (AC6)
+// Health cache key — persisted in chrome.storage.session so cache survives popup close/reopen (AC8)
 const HEALTH_CACHE_TTL_MS = 60000;
 const HEALTH_CACHE_STORAGE_KEY = '_healthCache';
 
@@ -68,7 +68,7 @@ async function fetchAndRenderHealth(haUrl) {
     clearTimeout(fetchTimeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const updateStatus = data.update_status || 'ok';  // AC7: default to 'ok' if field missing
+    const updateStatus = data.update_status || 'ok';  // AC8: default to 'ok' if field missing
     chrome.storage.session.set({ [HEALTH_CACHE_STORAGE_KEY]: { updateStatus, timestamp: now } });
     renderSystemStatus(updateStatus);
   } catch (_) {
@@ -122,6 +122,8 @@ function stopPolling() {
 function isYouTubeUrl(url) {
   try {
     const u = new URL(url);
+    // youtu.be short URLs: youtu.be/VIDEO_ID
+    if (u.hostname === 'youtu.be' && u.pathname.length > 1) return true;
     return (
       (u.hostname === 'www.youtube.com' || u.hostname === 'youtube.com') &&
       u.pathname === '/watch' &&
