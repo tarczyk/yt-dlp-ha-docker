@@ -29,7 +29,7 @@ jobs:
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             echo "effective_tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
-            VERSION=$(jq -r '.version' package.json)
+            VERSION=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' chrome-ext/manifest.json | head -1)
             echo "effective_tag=v${VERSION}" >> $GITHUB_OUTPUT
           fi
 
