@@ -22,6 +22,7 @@ Home Assistant add-on and Lovelace card that download YouTube videos via **yt-dl
 - [Chrome extension](#chrome-extension)
 - [Lovelace card](#lovelace-card)
 - [Home Assistant integration (Docker only)](#home-assistant-integration-docker-only)
+- [Releasing a new version](#releasing-a-new-version)
 - [Development](#development)
 - [Security](#security)
 - [License](#license)
@@ -154,15 +155,16 @@ Quick start:
 
 ## Chrome extension
 
-Manifest V3 extension in [chrome-ext/](chrome-ext/).
+Manifest V3 extension in [chrome-ext/](chrome-ext/). Distributed via GitHub Releases — not published on the Chrome Web Store.
 
-**Install from the Chrome Web Store (recommended):**
+**Install:**
 
-1. Open the [HA yt-dlp Downloader](https://chrome.google.com/webstore/detail/ha-yt-dlp-downloader) listing and click **Add to Chrome**.
-2. In the extension, open **Settings** and set your API URL (e.g. `http://192.168.1.100:5000`).
-3. On a YouTube video page, open the extension → **Download to HA**.
+1. Go to [Releases](https://github.com/tarczyk/ha-yt-dlp/releases) and download `ha-yt-dlp-chrome-ext-<version>.zip`.
+2. Unzip to a permanent local folder (e.g. `~/ha-yt-dlp-chrome-ext/`).
+3. Open `chrome://extensions/` → enable **Developer mode** → **Load unpacked** → select the unzipped folder.
+4. In the extension **Settings**, set your API URL (e.g. `http://192.168.1.100:5000`).
 
-**Manual install (Developer Mode):** open `chrome://extensions/` → **Developer mode** → **Load unpacked** → select `chrome-ext/`.
+**Update:** download the new zip from Releases, replace the folder contents, click the reload icon in `chrome://extensions/`.
 
 Full doc: [chrome-ext/README-chrome.md](chrome-ext/README-chrome.md).
 
@@ -231,6 +233,35 @@ If HA and Docker are on **different hosts**, expose the API (e.g. change port ma
 | `invalid url` | URL must start with `http://` or `https://`. |
 | No files in Media | `media_dirs` set; HA restarted; `DOWNLOAD_DIR` matches path in HA config. |
 | YouTube “Sign in” errors | Update yt-dlp: `docker compose pull && docker compose up -d`. |
+
+---
+
+## Releasing a new version
+
+**One-time setup:** make sure `bump-version.sh` is executable: `chmod +x bump-version.sh`.
+
+**Release flow (2 commands):**
+
+```bash
+./bump-version.sh 1.0.15   # updates versions in config.yaml, manifest.json, package.json → commits + tags
+git push && git push --tags # triggers CI
+```
+
+**What happens automatically after push:**
+
+| CI workflow | What it does |
+|-------------|-------------|
+| `tests.yml` | Runs pytest suite — fails fast if anything is broken |
+| `docker-build.yml` | Builds multi-arch image (amd64/arm64) → pushes `ghcr.io/tarczyk/ha-yt-dlp:latest` + `:{version}` |
+| `release-chrome-ext.yml` | Creates GitHub Release + attaches `ha-yt-dlp-chrome-ext-{version}.zip` |
+
+**After CI completes — user update steps:**
+
+| Component | How to update |
+|-----------|--------------|
+| **HA add-on** | HA → Settings → Add-ons → yt-dlp API → **Update** |
+| **Lovelace card (HACS)** | HA → HACS → Frontend → yt-dlp Downloader Card → **Update** |
+| **Chrome extension** | Download new `.zip` from [Releases](https://github.com/tarczyk/ha-yt-dlp/releases) → unzip → reload in `chrome://extensions/` |
 
 ---
 
