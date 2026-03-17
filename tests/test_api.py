@@ -497,6 +497,7 @@ def test_health_updating_status_reflected(client):
         "latest_version": "2026.03.07",
         "last_update": None,
         "update_status": "updating",
+        "service_degraded": False,
     }
     old = api_module._updater
     api_module._updater = mock_updater

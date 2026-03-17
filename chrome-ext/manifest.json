@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "HA yt-dlp Downloader",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "1-click YouTube → HA yt-dlp Docker API",
   "homepage_url": "https://github.com/tarczyk/ha-yt-dlp",
   "permissions": ["tabs", "activeTab", "storage"],

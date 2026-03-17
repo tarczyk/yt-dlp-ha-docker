@@ -174,6 +174,7 @@ def health():
         response["yt_dlp_latest"] = status["latest_version"]
         response["last_update"] = status["last_update"]
         response["update_status"] = status["update_status"]
+        response["service_degraded"] = status["service_degraded"]
     return jsonify(response), 200
 
 

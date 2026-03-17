@@ -123,12 +123,22 @@ class Updater:
         """
         Return current update status for /health endpoint.
         Makes NO external network calls — reads from in-memory state only.
+
+        service_degraded is True only when the installed version is behind the latest
+        AND the last update attempt failed — meaning downloads may be impacted.
+        A failed update when versions are already in sync is an operational issue,
+        not a user-facing service degradation.
         """
+        current = self._state.get("current_version", "")
+        latest = self._state.get("latest_version", "")
+        update_status = self._state.get("update_status", "ok")
+        service_degraded = (update_status == "failed") and (current != latest)
         return {
-            "current_version": self._state.get("current_version", ""),
-            "latest_version": self._state.get("latest_version", ""),
+            "current_version": current,
+            "latest_version": latest,
             "last_update": self._state.get("last_successful_update"),
-            "update_status": self._state.get("update_status", "ok"),
+            "update_status": update_status,
+            "service_degraded": service_degraded,
         }
 
     def is_updating(self) -> bool:
@@ -270,13 +280,45 @@ class Updater:
             try:
                 with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: F841
                     logger.info("[HA-NOTIFY] Notification sent (reason=%s)", reason)
-                    return
+                    break
             except Exception as exc:
                 logger.warning("[HA-NOTIFY] Failed to send notification (attempt %d/2): %s", attempt + 1, exc)
             if attempt == 0:
                 time.sleep(5)
+        else:
+            logger.critical("[HA-NOTIFY] Failed to send HA notification after retry")
 
-        logger.critical("[HA-NOTIFY] Failed to send HA notification after retry")
+        self._send_ha_event(error_type, reason)
+
+    def _send_ha_event(self, error_type: str, reason: str) -> None:
+        """
+        Fire a dedicated HA event 'ha_yt_dlp_update_failed' for stable automation triggers.
+
+        Allows HA automations to trigger on event_type without fragile text matching
+        on persistent_notification title.
+        """
+        token = os.environ.get("SUPERVISOR_TOKEN")
+        if not token:
+            return
+
+        current_version = self._state.get("current_version", "unknown")
+        payload = json.dumps({
+            "message": f"{error_type}. yt-dlp: {current_version}",
+            "error_code": error_type,
+            "reason": reason,
+        }).encode("utf-8")
+
+        url = "http://supervisor/core/api/events/ha_yt_dlp_update_failed"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+        req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=10):
+                logger.info("[HA-NOTIFY] Event ha_yt_dlp_update_failed fired (reason=%s)", reason)
+        except Exception as exc:
+            logger.warning("[HA-NOTIFY] Failed to fire HA event: %s", exc)
 
     # ------------------------------------------------------------------
     # Internal helpers

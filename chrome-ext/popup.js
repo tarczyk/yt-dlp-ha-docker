@@ -35,12 +35,12 @@ const systemStatusEl   = document.getElementById('systemStatus');
 
 // ── System status (from /health) ─────────────────────────────────────────────
 
-function renderSystemStatus(updateStatus) {
-  if (updateStatus === 'ok') {
+function renderSystemStatus(serviceDegraded) {
+  if (!serviceDegraded) {
     systemStatusEl.textContent = '✅ System gotowy';
     systemStatusEl.className = 'ok';
   } else {
-    // 'failed' or 'updating' both show the warning — Beatka cannot act on either
+    // service_degraded: version is behind latest AND last update failed
     systemStatusEl.textContent = '⚠️ System wymaga uwagi — skontaktuj się z administratorem';
     systemStatusEl.className = 'warning';
   }
@@ -68,14 +68,14 @@ async function fetchAndRenderHealth(haUrl) {
     clearTimeout(fetchTimeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const updateStatus = data.update_status || 'ok';  // AC8: default to 'ok' if field missing
-    chrome.storage.session.set({ [HEALTH_CACHE_STORAGE_KEY]: { updateStatus, timestamp: now } });
-    renderSystemStatus(updateStatus);
+    const serviceDegraded = data.service_degraded || false;  // default false: show green when field missing
+    chrome.storage.session.set({ [HEALTH_CACHE_STORAGE_KEY]: { serviceDegraded, timestamp: now } });
+    renderSystemStatus(serviceDegraded);
   } catch (_) {
     clearTimeout(fetchTimeout);
     // Show last known status on error (stale cache) rather than hiding (better UX)
     if (cached) {
-      renderSystemStatus(cached.updateStatus);
+      renderSystemStatus(cached.serviceDegraded);
     } else {
       systemStatusEl.style.display = 'none';
     }

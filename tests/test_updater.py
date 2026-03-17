@@ -159,6 +159,7 @@ class TestGetUpdateStatus:
         assert "latest_version" in status
         assert "last_update" in status
         assert "update_status" in status
+        assert "service_degraded" in status
 
     def test_no_network_calls(self, tmp_path):
         updater = Updater(state_path=str(tmp_path / "state.json"))
@@ -175,6 +176,41 @@ class TestGetUpdateStatus:
             _ = updater.get_update_status()
 
         mock_sub.assert_not_called()
+
+    def test_service_degraded_false_when_versions_equal_and_failed(self, tmp_path):
+        """Failed update but versions in sync → service_degraded=False (Beatka sees green)."""
+        state = {
+            "current_version": "2026.02.04",
+            "latest_version": "2026.02.04",
+            "update_status": "failed",
+            "last_update_attempt": None,
+            "last_successful_update": None,
+            "last_error": "subprocess exit code 1",
+        }
+        state_file = tmp_path / "state.json"
+        state_file.write_text(__import__("json").dumps(state))
+        updater = Updater(state_path=str(state_file))
+        assert updater.get_update_status()["service_degraded"] is False
+
+    def test_service_degraded_true_when_version_behind_and_failed(self, tmp_path):
+        """Failed update and version is outdated → service_degraded=True."""
+        state = {
+            "current_version": "2025.12.01",
+            "latest_version": "2026.02.04",
+            "update_status": "failed",
+            "last_update_attempt": None,
+            "last_successful_update": None,
+            "last_error": "subprocess exit code 1",
+        }
+        state_file = tmp_path / "state.json"
+        state_file.write_text(__import__("json").dumps(state))
+        updater = Updater(state_path=str(state_file))
+        assert updater.get_update_status()["service_degraded"] is True
+
+    def test_service_degraded_false_when_status_ok(self, tmp_path):
+        """update_status=ok → service_degraded=False regardless of versions."""
+        updater = Updater(state_path=str(tmp_path / "state.json"))
+        assert updater.get_update_status()["service_degraded"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -549,10 +585,14 @@ class TestHaNotification:
                 with patch("time.sleep"):
                     updater.update_if_needed("scheduled")
         mock_open.assert_called()
-        req = mock_open.call_args[0][0]
+        # First call is persistent_notification/create, second is the event endpoint
+        req = mock_open.call_args_list[0][0][0]
         assert req.full_url == "http://supervisor/core/api/services/persistent_notification/create"
         assert req.get_header("Authorization") == f"Bearer {ha_supervisor_token}"
         assert req.get_header("Content-type") == "application/json"
+        # Second call fires the dedicated HA event
+        event_req = mock_open.call_args_list[1][0][0]
+        assert event_req.full_url == "http://supervisor/core/api/events/ha_yt_dlp_update_failed"
 
     # 3.2 — SUPERVISOR_TOKEN set + non-zero returncode → notification fired
     def test_nonzero_returncode_fires_notification(self, tmp_path, ha_supervisor_token):
@@ -584,7 +624,7 @@ class TestHaNotification:
                     with caplog.at_level(logging.CRITICAL):
                         updater.update_if_needed("scheduled")
 
-        assert call_count[0] == 2
+        assert call_count[0] == 3  # 2 notification retries + 1 event endpoint
         assert not any(r.levelno == logging.CRITICAL for r in caplog.records)
 
     # 3.4 — both HTTP calls fail → logger.critical with [HA-NOTIFY] message
@@ -659,7 +699,8 @@ class TestHaNotification:
                 with patch("time.sleep"):
                     updater.update_if_needed("scheduled")
 
-        req = mock_open.call_args[0][0]
+        # First call is persistent_notification, last call is the event endpoint
+        req = mock_open.call_args_list[0][0][0]
         payload = json.loads(req.data.decode("utf-8"))
         assert payload["title"] == "⚠️ ha-yt-dlp"
         assert "timeout after 120s" in payload["message"]
