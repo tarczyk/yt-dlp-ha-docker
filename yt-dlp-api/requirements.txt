@@ -1,4 +1,4 @@
 flask>=3.0
 yt-dlp
 yt-dlp-ejs>=0.4
-APScheduler>=3.10
+APScheduler>=3.11.2
